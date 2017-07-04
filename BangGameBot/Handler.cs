@@ -32,13 +32,18 @@ namespace BangGameBot
                             return;
                         }
                         if (Games.Any(x => x.Status == GameStatus.Joining))
-                            Games.OrderBy(x => x.Players.Count()).FirstOrDefault().AddPlayer(msg.From);
+                            Games.Where(x => x.Status == GameStatus.Joining).OrderBy(x => x.Players.Count()).FirstOrDefault().AddPlayer(msg.From);
                         else
                             Games.Add(new Game(msg));
                         break;
                     default:
                         break;
                 }
+            }
+            else {
+                var game = Games.FirstOrDefault(x => x.Players.Any(p => p.Id == userid));
+                if (game != null)
+                    game.SendMessage(msg.From, msg.Text);
             }
         }
 

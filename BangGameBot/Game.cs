@@ -3,20 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace BangGameBot
 {
     public class Game
     {
-        private int MinPlayers = 4;
+        private int MinPlayers = 2;
         public int Id = 0;
         public GameStatus Status = GameStatus.Joining;
         public List<Player> Players = new List<Player>();
+        private Dealer Dealer = new Dealer();
 
         public Game (Message msg) {
+            var i = 1;
             do {
-                var i = 1;
                 if (Handler.Games.Any(x => x.Id == i))
                     i++;
                 else
@@ -27,8 +29,7 @@ namespace BangGameBot
         }
 
         public void AddPlayer (User u) {
-            var p = new Player() { TelegramUser = u };
-            Players.Add(p);
+            Players.Add(new Player(u));
             if (Players.Count() == 8)
                 StartGame();
             else
@@ -55,17 +56,16 @@ namespace BangGameBot
         public void VoteStart (User u) {
             var p = Players.FirstOrDefault(x => x.Id == u.Id);
             p.VotedToStart = !p.VotedToStart;
+            UpdateJoinMessages();
             if (Players.All(x => x.VotedToStart))
                 StartGame();
-            else
-                UpdateJoinMessages();
             return;
         }
 
-        private void UpdateJoinMessages () {
+        private void UpdateJoinMessages (bool startinggame = false) {
             foreach (var p in Players) {
-                string text = "You have been added to a game.";
-                if (Players.Count() >= MinPlayers)
+                string text = startinggame ? "Game started!" : "You have been added to a game.";
+                if (Players.Count() >= MinPlayers || !startinggame)
                     text += p.VotedToStart ? "\nClick the Unvote button to remove your vote." : "\nClick the Start button to vote to start the game.";
                 text += "\n\nPlayers:";
                 text += Players.Aggregate("", (a, b) => a + "\n" + b.TelegramUser.FirstName + (b.VotedToStart ? " 👍" : ""));
@@ -75,18 +75,27 @@ namespace BangGameBot
                     buttons.Add(new InlineKeyboardButton(p.VotedToStart ? "Unvote" : "Start", $"{Id}|start"));
                 var menu = new InlineKeyboardMarkup(buttons.ToArray());
                 if (p.JoinMsg == null)
-                    p.JoinMsg = Bot.Send(text, p.Id, menu).Result;
+                    p.JoinMsg = Bot.Send(text, p.Id, startinggame ? null : menu).Result;
                 else
-                    p.JoinMsg = Bot.Edit(text, p.JoinMsg, menu).Result;
+                    p.JoinMsg = Bot.Edit(text, p.JoinMsg, startinggame ? null : menu).Result;
             }
             return;
         }
 
 
         private void StartGame() {
-            foreach (var p in Players)
-                Bot.Send("Game started!", p.Id);
+            UpdateJoinMessages(true);
             Status = GameStatus.Running;
+
+
+        }
+
+
+        public void SendMessage(User u, string text) {
+            foreach (var player in Players)
+                if (player.Id != u.Id)
+                    Bot.Send(u.FirstName + ":\n" + text, player.Id, parseMode: ParseMode.Default);
+            return;
         }
     }
 }

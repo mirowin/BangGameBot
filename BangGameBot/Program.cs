@@ -11,6 +11,7 @@ namespace BangGameBot
 {
 	static class Program
 	{
+        public static readonly Random R = new Random();
         public static readonly string TokenPath = "token.txt";
         public static readonly string LogPath = "errors.log";
         public static readonly long renyhp = 133748469;
