@@ -42,6 +42,7 @@ namespace BangGameBot
         /// Steals card c from player p. If card is null, a random card from hand is chosen. Returns the stolen card
         /// </summary>
         public Card StealFrom(Player p, Card c = null) {
+            
             if (c == null) 
                 c = p.ChooseCardFromHand();
             c.IsOnTable = false;
@@ -71,71 +72,7 @@ namespace BangGameBot
         public List<Card> Deck { get; private set; } = new List<Card>();
         public List<Card> Graveyard { get; private set; } = new List<Card>();
         public Dealer () {
-            for (int i = 2; i <= 14; i++) {
-                //Bang!
-                if (i <= 9)
-                    Deck.Add(new Card(CardName.Bang, i, CardSuit.Clubs));
-                Deck.Add(new Card(CardName.Bang, i, CardSuit.Diamonds));
-                if (i >= 12)
-                    Deck.Add(new Card(CardName.Bang, i, CardSuit.Hearts));
-                if (i == 14)
-                    Deck.Add(new Card(CardName.Bang, i, CardSuit.Spades));
-
-                //Missed
-                if (i <= 8)
-                    Deck.Add(new Card(CardName.Missed, i, CardSuit.Spades));
-                if (i >=10)
-                    Deck.Add(new Card(CardName.Missed, i, CardSuit.Clubs));
-
-                //Beer
-                if (i >= 6 && i <= 11)
-                    Deck.Add(new Card(CardName.Beer, i, CardSuit.Hearts));
-            }
-
-            //normal cards
-            Deck.Add(new Card(CardName.Panic, 11, CardSuit.Hearts));
-            Deck.Add(new Card(CardName.Panic, 12, CardSuit.Hearts));
-            Deck.Add(new Card(CardName.Panic, 14, CardSuit.Hearts));
-            Deck.Add(new Card(CardName.Panic, 8, CardSuit.Diamonds));
-            Deck.Add(new Card(CardName.CatBalou, 9, CardSuit.Diamonds));
-            Deck.Add(new Card(CardName.CatBalou, 10, CardSuit.Diamonds));
-            Deck.Add(new Card(CardName.CatBalou, 11, CardSuit.Diamonds));
-            Deck.Add(new Card(CardName.CatBalou, 13, CardSuit.Hearts));
-            Deck.Add(new Card(CardName.Stagecoach, 9, CardSuit.Spades));
-            Deck.Add(new Card(CardName.Stagecoach, 9, CardSuit.Spades));
-            Deck.Add(new Card(CardName.WellsFargo, 3, CardSuit.Hearts));
-            Deck.Add(new Card(CardName.Gatling, 10, CardSuit.Hearts));
-            Deck.Add(new Card(CardName.Duel, 12, CardSuit.Diamonds));
-            Deck.Add(new Card(CardName.Duel, 12, CardSuit.Diamonds));
-            Deck.Add(new Card(CardName.Duel, 11, CardSuit.Spades));
-            Deck.Add(new Card(CardName.Duel, 8, CardSuit.Clubs));
-            Deck.Add(new Card(CardName.Indians, 13, CardSuit.Diamonds));
-            Deck.Add(new Card(CardName.Indians, 14, CardSuit.Diamonds));
-            Deck.Add(new Card(CardName.GeneralStore, 9, CardSuit.Clubs));
-            Deck.Add(new Card(CardName.GeneralStore, 12, CardSuit.Spades));
-            Deck.Add(new Card(CardName.Saloon, 5, CardSuit.Hearts));
-
-            //permcards
-            Deck.Add(new Card(CardName.Jail, 10, CardSuit.Spades));
-            Deck.Add(new Card(CardName.Jail, 11, CardSuit.Spades));
-            Deck.Add(new Card(CardName.Jail, 4, CardSuit.Hearts));
-            Deck.Add(new Card(CardName.Dynamite, 2, CardSuit.Hearts));
-            Deck.Add(new Card(CardName.Barrel, 12, CardSuit.Spades));
-            Deck.Add(new Card(CardName.Barrel, 13, CardSuit.Spades));
-            Deck.Add(new Card(CardName.Scope, 14, CardSuit.Spades));
-            Deck.Add(new Card(CardName.Mustang, 8, CardSuit.Hearts));
-            Deck.Add(new Card(CardName.Mustang, 9, CardSuit.Hearts));
-
-            //weapons
-            Deck.Add(new Card(CardName.Volcanic, 10, CardSuit.Clubs));
-            Deck.Add(new Card(CardName.Volcanic, 10, CardSuit.Spades));
-            Deck.Add(new Card(CardName.Schofield, 11, CardSuit.Clubs));
-            Deck.Add(new Card(CardName.Schofield, 12, CardSuit.Clubs));
-            Deck.Add(new Card(CardName.Schofield, 13, CardSuit.Spades));
-            Deck.Add(new Card(CardName.Remington, 13, CardSuit.Clubs));
-            Deck.Add(new Card(CardName.RevCarabine, 14, CardSuit.Clubs));
-            Deck.Add(new Card(CardName.Winchester, 8, CardSuit.Spades));
-
+            MakeNewDeck();
 
             Deck.Shuffle();
             Deck.Shuffle();
@@ -245,6 +182,72 @@ namespace BangGameBot
         private void SendToGraveyard(Card c) {
             c.IsOnTable = false;
             Graveyard.Add(c);
+        }
+
+        private List<Card> MakeNewDeck() {
+            for (int i = 2; i <= 14; i++) {
+                //Bang!
+                if (i <= 9)
+                    Deck.Add(new Card(CardName.Bang, i, CardSuit.Clubs));
+                Deck.Add(new Card(CardName.Bang, i, CardSuit.Diamonds));
+                if (i >= 12)
+                    Deck.Add(new Card(CardName.Bang, i, CardSuit.Hearts));
+                if (i == 14)
+                    Deck.Add(new Card(CardName.Bang, i, CardSuit.Spades));
+
+                //Missed
+                if (i <= 8)
+                    Deck.Add(new Card(CardName.Missed, i, CardSuit.Spades));
+                if (i >= 10)
+                    Deck.Add(new Card(CardName.Missed, i, CardSuit.Clubs));
+
+                //Beer
+                if (i >= 6 && i <= 11)
+                    Deck.Add(new Card(CardName.Beer, i, CardSuit.Hearts));
+            }
+
+            //normal cards
+            Deck.Add(new Card(CardName.Panic, 11, CardSuit.Hearts));
+            Deck.Add(new Card(CardName.Panic, 12, CardSuit.Hearts));
+            Deck.Add(new Card(CardName.Panic, 14, CardSuit.Hearts));
+            Deck.Add(new Card(CardName.Panic, 8, CardSuit.Diamonds));
+            Deck.Add(new Card(CardName.CatBalou, 9, CardSuit.Diamonds));
+            Deck.Add(new Card(CardName.CatBalou, 10, CardSuit.Diamonds));
+            Deck.Add(new Card(CardName.CatBalou, 11, CardSuit.Diamonds));
+            Deck.Add(new Card(CardName.CatBalou, 13, CardSuit.Hearts));
+            Deck.Add(new Card(CardName.Stagecoach, 9, CardSuit.Spades));
+            Deck.Add(new Card(CardName.Stagecoach, 9, CardSuit.Spades));
+            Deck.Add(new Card(CardName.WellsFargo, 3, CardSuit.Hearts));
+            Deck.Add(new Card(CardName.Gatling, 10, CardSuit.Hearts));
+            Deck.Add(new Card(CardName.Duel, 12, CardSuit.Diamonds));
+            Deck.Add(new Card(CardName.Duel, 11, CardSuit.Spades));
+            Deck.Add(new Card(CardName.Duel, 8, CardSuit.Clubs));
+            Deck.Add(new Card(CardName.Indians, 13, CardSuit.Diamonds));
+            Deck.Add(new Card(CardName.Indians, 14, CardSuit.Diamonds));
+            Deck.Add(new Card(CardName.GeneralStore, 9, CardSuit.Clubs));
+            Deck.Add(new Card(CardName.GeneralStore, 12, CardSuit.Spades));
+            Deck.Add(new Card(CardName.Saloon, 5, CardSuit.Hearts));
+
+            //permcards
+            Deck.Add(new Card(CardName.Jail, 10, CardSuit.Spades));
+            Deck.Add(new Card(CardName.Jail, 11, CardSuit.Spades));
+            Deck.Add(new Card(CardName.Jail, 4, CardSuit.Hearts));
+            Deck.Add(new Card(CardName.Dynamite, 2, CardSuit.Hearts));
+            Deck.Add(new Card(CardName.Barrel, 12, CardSuit.Spades));
+            Deck.Add(new Card(CardName.Barrel, 13, CardSuit.Spades));
+            Deck.Add(new Card(CardName.Scope, 14, CardSuit.Spades));
+            Deck.Add(new Card(CardName.Mustang, 8, CardSuit.Hearts));
+            Deck.Add(new Card(CardName.Mustang, 9, CardSuit.Hearts));
+
+            //weapons
+            Deck.Add(new Card(CardName.Volcanic, 10, CardSuit.Clubs));
+            Deck.Add(new Card(CardName.Volcanic, 10, CardSuit.Spades));
+            Deck.Add(new Card(CardName.Schofield, 11, CardSuit.Clubs));
+            Deck.Add(new Card(CardName.Schofield, 12, CardSuit.Clubs));
+            Deck.Add(new Card(CardName.Schofield, 13, CardSuit.Spades));
+            Deck.Add(new Card(CardName.Remington, 13, CardSuit.Clubs));
+            Deck.Add(new Card(CardName.RevCarabine, 14, CardSuit.Clubs));
+            Deck.Add(new Card(CardName.Winchester, 8, CardSuit.Spades));
         }
     }
 

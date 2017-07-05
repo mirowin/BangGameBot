@@ -142,14 +142,13 @@ namespace BangGameBot
 
         public static Card GetCard(this string str, Dealer d, List<Player> p) {
             var ints = str.Split(',');
-            var card = new Card((CardName)int.Parse(ints[0]), int.Parse(ints[1]), (CardSuit)int.Parse(ints[2])) { IsOnTable = ints[3] == "1" };
+            //parse the card
+            var name = (CardName)int.Parse(ints[0]);
+            var number = int.Parse(ints[1]);
+            var suit = (CardSuit)int.Parse(ints[2]);
+            var isontable = ints[3] == "1";
             //now find where this card is
-            return d.Deck.Union(p.SelectMany(x => x.Cards)).FirstOrDefault(x => x.IsEqualTo(card));
-        }
-
-        //seems like this is not best practice but meh
-        public static bool IsEqualTo(this Card c, Card d) {
-            return c.Name == d.Name && c.Number == d.Number && c.Suit == d.Suit;
+            return d.Deck.Union(p.SelectMany(x => x.Cards)).FirstOrDefault(x => x.Name == name && x.Number == number && x.Suit == suit && x.IsOnTable == isontable);
         }
 
         public static T[] ToSinglet<T>(this T obj) {

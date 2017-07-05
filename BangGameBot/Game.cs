@@ -186,6 +186,7 @@ namespace BangGameBot
 
         private void PhaseOne(Player curplayer) {
             //TODO Kit carlson
+            //TODO Black Jack
 
             if ((curplayer.Character == Character.JesseJones || curplayer.Character == Character.PedroRamirez) && CanUseAbility(curplayer)) {
                 //ask them if they want to use the ability
