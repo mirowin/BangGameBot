@@ -23,8 +23,21 @@ namespace BangGameBot
             Bot.Api.OnCallbackQuery += Bot_OnCallbackQuery;
             Bot.Api.OnReceiveError += Bot_Api_OnReceiveError;
             Bot.Api.OnReceiveGeneralError += Bot_Api_OnReceiveGeneralError;
+            Bot.Api.OnInlineQuery += Bot_OnInlineQuery;
             Bot.Api.StartReceiving();
             Thread.Sleep(-1);
+        }
+
+        static void Bot_OnInlineQuery (object sender, Telegram.Bot.Args.InlineQueryEventArgs e)
+        {
+            new Task (() => {
+                try {
+                    Handler.HandleInlineQuery (e.InlineQuery);
+                } catch (Exception ex) {
+                    LogError (ex);
+                }
+            }).Start ();
+            return;
         }
 
         static void Bot_Api_OnReceiveGeneralError (object sender, Telegram.Bot.Args.ReceiveGeneralErrorEventArgs e)

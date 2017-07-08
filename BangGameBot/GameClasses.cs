@@ -50,6 +50,26 @@ namespace BangGameBot
             this.Cards.Add(c);
             return c;
         }
+
+
+        /// <summary>
+        /// Player "draws!". Returns the card drawn
+        /// </summary>
+        public Card Draw(Dealer deck) {
+            //TODO
+            //...lucky luke
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Player loses n lives, being hit by source
+        /// </summary>
+        public void HitPlayer(int n, Player source = null) {
+            //TODO
+            //..bart cassidy
+            //..el gringo
+            //...etc
+        }
     }
 
     public class Card 
@@ -184,7 +204,7 @@ namespace BangGameBot
             Graveyard.Add(c);
         }
 
-        private List<Card> MakeNewDeck() {
+        private void MakeNewDeck() {
             for (int i = 2; i <= 14; i++) {
                 //Bang!
                 if (i <= 9)
@@ -292,7 +312,7 @@ namespace BangGameBot
     }
 
     public enum Character {
-        PaulRegret, Jourdounnais, BlackJack, SlabTheKiller, ElGringo, JesseJones, SuzyLafayette, WillyTheKid, RoseDoolan, BartCassidy, PedroRamirez, SidKetchum
+        PaulRegret, Jourdounnais, BlackJack, SlabTheKiller, ElGringo, JesseJones, SuzyLafayette, WillyTheKid, RoseDoolan, BartCassidy, PedroRamirez, SidKetchum, LuckyDuke, VultureSam, CalamityJanet, KitCarlson
     }
 
     public enum Role {

@@ -4,13 +4,23 @@ using System.Linq;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace BangGameBot
 {
     public static class Handler
     {
+
         public static List<Game> Games = new List<Game>();
+        public static readonly Dictionary<ErrorMessage,string> ErrorMessages = new Dictionary<ErrorMessage, string>() {
+            {ErrorMessage.NoPlayersToStealFrom, "There are no players to steal from!"}  
+        };
+
+        public static readonly List<InlineQueryResultCachedPhoto> Cards = new List<InlineQueryResultCachedPhoto>() {
+            MakeInlineResult("AgADBAAD6To4G30XZAfv-OF0KgoTqaalmxkABHLrrQghFmflTZQBAAEC", "Cat Balou", "With this card you can discard a card from any player"),
+            MakeInlineResult("AgADBAADXD04G7MXZAc-QahBMTE2oYxsuxkABCZDQqYPkkLsFu4CAAEC", "El Gringo", "Each time he is hit by a player, he draws a card from the hand of that player")
+        };
 
         public static void HandleMessage (Message msg) {
             var chatid = msg.Chat.Id;
@@ -43,6 +53,13 @@ namespace BangGameBot
                             //create new game
                             Games.Add(new Game(msg));
                         break;
+                    case "photoid":
+                        if (userid != Program.renyhp)
+                            return;
+                        if (msg.ReplyToMessage?.Photo[0]?.FileId == null)
+                            Bot.Send("You must reply to a photo", chatid);
+                        Bot.Send(msg.ReplyToMessage?.Photo[0]?.FileId, chatid);
+                        return;
                     default:
                         break;
                 }
@@ -83,9 +100,20 @@ namespace BangGameBot
             }
         }
 
-        public static Dictionary<ErrorMessage,string> ErrorMessages = new Dictionary<ErrorMessage, string>() {
-            {ErrorMessage.NoPlayersToStealFrom, "There are no players to steal from!"}  
-        };
+        public static void HandleInlineQuery (InlineQuery q) {
+            Bot.Api.AnswerInlineQueryAsync(q.Id, Cards.Where(x => x.Title.ToLower().Contains(q.Query.ToLower()) || x.Title.ToLower().ComputeLevenshtein(q.Query.ToLower()) < 3).ToArray());
+            return;
+        }
+
+        private static InlineQueryResultCachedPhoto MakeInlineResult(string photoid, string name, string description) {
+            return new InlineQueryResultCachedPhoto() {
+                Id = name,
+                Title = name,
+                FileId = photoid,
+                Description = description, //hoping someone will see it XD
+                Caption = description
+            };
+        }
 
     }
 }

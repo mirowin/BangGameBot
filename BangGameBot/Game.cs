@@ -107,7 +107,7 @@ namespace BangGameBot
                 if (Turn == Players.Count())
                     Turn = 0;
                 var currentplayer = Players[Turn];
-                //TODO Phase Zero: check for Dynamite and Jail
+                CheckDynamiteAndJail(currentplayer);
                 PhaseOne(currentplayer);
                 //TODO PhaseTwo(currentplayer);
                 PhaseThree(currentplayer);
@@ -183,39 +183,77 @@ namespace BangGameBot
             return;
         }
 
+        private void CheckDynamiteAndJail(Player curplayer) {
+            if (curplayer.CardsOnTable.Any(x => x.Name == CardName.Dynamite)) {
+                //TODO
+            }
+            if (curplayer.CardsOnTable.Any(x => x.Name == CardName.Jail)) {
+                //TODO
+            }
+        }
 
         private void PhaseOne(Player curplayer) {
-            //TODO Kit carlson
-            //TODO Black Jack
-
-            if ((curplayer.Character == Character.JesseJones || curplayer.Character == Character.PedroRamirez) && CanUseAbility(curplayer)) {
-                //ask them if they want to use the ability
-                var str = curplayer.Character == Character.JesseJones ? 
-                    "You are Jesse Jones: you can draw your first card from the hand of a player." :
-                    $"You are Pedro Ramirez: you can draw your first card from the top of the graveyard. ({Dealer.Graveyard.Last().GetDescription()})";
-                str += "\nDo you want to use your ability or do you want to draw from the deck?";
-                Send(str, curplayer, MakeBoolMenu("Use ability", "Draw from deck"));
-
-                //now let's see what they chose
-                if (WaitForChoice(curplayer, 30)?.ChoseYes ?? DefaultChoice.UseAbilityPhaseOne) {
-                    switch (curplayer.Character) {
-                        case Character.JesseJones:
-                            //steal from a player
-                            UsePanic(curplayer, true);
-                            break;
-                        case Character.PedroRamirez:
-                            var card = Dealer.DrawFromGraveyard(curplayer).GetDescription();
-                            Send($"You drew {card} from the graveyard", curplayer);
-                            SendToEveryone($"{curplayer.Name} drew {card} from the graveyard", curplayer);
-                            break;
-                    }
-                    DrawCards(curplayer, 1);
+            Card card;
+            List<Card> cardsdrawn;
+            switch (curplayer.Character) {
+                case Character.KitCarlson:
+                    Send("You are Kit Carlson. You draw 3 cards from the deck, then choose one to discard.", curplayer);
+                    cardsdrawn = DrawCards(curplayer, 3);
+                    Send("Choose the card to discard", curplayer, MakeMenuFromCards(cardsdrawn));
+                    var cardchosen = WaitForChoice(curplayer, 30)?.CardChosen ?? DefaultChoice.ChooseCard;
+                    card = Dealer.Discard(curplayer, cardchosen);
+                    Send("You discarded " + card.GetDescription(), curplayer);
+                    SendToEveryone(curplayer.Name + " discarded " + card.GetDescription(), curplayer);
                     return;
-                }
-                //if they chose no, it's exactly as another character.
-            }
+                case Character.BlackJack:
+                    Send("You are Black Jack. You show the second card you draw; on Hearts or Diamonds, you draw one more card.", curplayer);
+                    var secondcard = DrawCards(curplayer, 2)[1];
+                    switch (secondcard.Suit) {
+                        case CardSuit.Hearts:
+                        case CardSuit.Diamonds:
+                            Send("The second card was " + secondcard.Suit.ToEmoji() + ", so you draw another card.", curplayer);
+                            SendToEveryone(curplayer.Name + "drew " + secondcard.GetDescription() + ", so they draw another card.", curplayer);
+                            DrawCards(curplayer, 1);
+                            return;
+                        case CardSuit.Clubs:
+                        case CardSuit.Spades:
+                            SendToEveryone(curplayer.Name + "drew " + secondcard.GetDescription() + ", so they can't draw another card.", curplayer);
+                            return;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                default:
+                    //Jesse Jones & Pedro Ramirez can choose.
+                    if ((curplayer.Character == Character.JesseJones || curplayer.Character == Character.PedroRamirez) && CanUseAbility(curplayer)) {
+                        //ask them if they want to use the ability
+                        var str = curplayer.Character == Character.JesseJones ? 
+                            "You are Jesse Jones: you can draw your first card from the hand of a player." :
+                            $"You are Pedro Ramirez: you can draw your first card from the top of the graveyard. ({Dealer.Graveyard.Last().GetDescription()})";
+                        str += "\nDo you want to use your ability or do you want to draw from the deck?";
+                        Send(str, curplayer, MakeBoolMenu("Use ability", "Draw from deck"));
 
-            DrawCards(curplayer, 2);
+                        //now let's see what they chose
+                        if (WaitForChoice(curplayer, 30)?.ChoseYes ?? DefaultChoice.UseAbilityPhaseOne) {
+                            switch (curplayer.Character) {
+                                case Character.JesseJones:
+                                    //steal from a player
+                                    UsePanic(curplayer, true);
+                                    break;
+                                case Character.PedroRamirez:
+                                    var carddesc = Dealer.DrawFromGraveyard(curplayer).GetDescription();
+                                    Send($"You drew {carddesc} from the graveyard", curplayer);
+                                    SendToEveryone($"{curplayer.Name} drew {carddesc} from the graveyard", curplayer);
+                                    break;
+                            }
+                            DrawCards(curplayer, 1);
+                            return;
+                        }
+                        //if they chose no, it's exactly as another character.
+                    }
+
+                    DrawCards(curplayer, 2);
+                    return;
+            }
         }
 
 
@@ -264,7 +302,7 @@ namespace BangGameBot
             }
         }
 
-        private void DrawCards(Player p, int n) {
+        private List<Card> DrawCards(Player p, int n) {
             var result = Dealer.DrawCards(n, p);
             var listofcards = result.Item1;
             var reshuffled = result.Item2;
@@ -284,7 +322,9 @@ namespace BangGameBot
                 Send(msgforp, p);
                 SendToEveryone(p.Name + "drew " + (reshuffled + 1).ToString() + " cards from the deck.\nThe deck was reshuffled.\n" + p.Name + "drew " + (listofcards.Count()-reshuffled).ToString() + " cards from the deck.", p);
             }
+            return listofcards;
         }
+       
 
         private void UsePanic(Player curplayer, bool jessejonesability = false) {
             var possiblechoices = jessejonesability ? Players.Where(x => x != curplayer && x.Lives > 0 && x.CardsInHand.Count() > 0) : Players.Where(x => x.Lives > 0 && x.Cards.Count() > 0 && curplayer.DistanceSeen(x, Players) == 1);
@@ -346,6 +386,13 @@ namespace BangGameBot
             return new InlineKeyboardMarkup(buttons.ToArray());
         }
 
+        private InlineKeyboardMarkup MakeMenuFromCards (List<Card> list) {
+            var buttons = new List<InlineKeyboardButton[]>();
+            foreach (var c in list) 
+                buttons.Add(new InlineKeyboardButton(c.GetDescription(), $"{Id}|card|{c.Encode()}").ToSinglet());
+            return new InlineKeyboardMarkup(buttons.ToArray());
+        }
+
         private void SendPlayerList(Player p = null) {
             //TODO improve UI, add menu (to delete at end of turn!)
             if (p == null) {
@@ -376,6 +423,7 @@ namespace BangGameBot
         /// Send the specified text and menu to Player p. To be used only during Turn!
         /// </summary>
         private void Send(string text, Player p, IReplyMarkup menu = null) {
+            //TODO use a queue or something, store the messages to send and send only when a menu is sent or disabled.
             if (p.TurnMsg == null)
                 p.TurnMsg = Bot.Send(text, p.Id, menu).Result;
             else
