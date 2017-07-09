@@ -51,25 +51,6 @@ namespace BangGameBot
             return c;
         }
 
-
-        /// <summary>
-        /// Player "draws!". Returns the card drawn
-        /// </summary>
-        public Card Draw(Dealer deck) {
-            //TODO
-            //...lucky luke
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Player loses n lives, being hit by source
-        /// </summary>
-        public void HitPlayer(int n, Player source = null) {
-            //TODO
-            //..bart cassidy
-            //..el gringo
-            //...etc
-        }
     }
 
     public class Card 
@@ -295,6 +276,9 @@ namespace BangGameBot
             return players.Random();
         }
         public static readonly Card ChooseCard = null;
+        public static Card ChooseCardFrom(List<Card> cards) {
+            return cards.Random();
+        }
         public static readonly bool DiscardCard = false;
     }
 

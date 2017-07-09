@@ -30,6 +30,7 @@ namespace BangGameBot
         }
 
         public static int DistanceSeen(this Player source, Player target, List<Player> players) {
+            //TODO deal with dead players!
             var i = players.IndexOf(source);
             var j = players.IndexOf(target);
             //direct distance

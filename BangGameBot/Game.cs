@@ -17,8 +17,9 @@ namespace BangGameBot
         public int Id = 0;
         public GameStatus Status = GameStatus.Joining;
         public List<Player> Players = new List<Player>();
+        public List<Player> DeadPlayers = new List<Player>();
         private Dealer Dealer = new Dealer();
-        private int Turn = 0;
+        private int Turn = -1;
 
         public Game (Message msg) {
             var i = 1;
@@ -103,22 +104,25 @@ namespace BangGameBot
             DealCards();
 
             while (true) {
+                Turn++;
                 SendPlayerList();
                 if (Turn == Players.Count())
                     Turn = 0;
                 var currentplayer = Players[Turn];
                 CheckDynamiteAndJail(currentplayer);
-                PhaseOne(currentplayer);
-                //TODO PhaseTwo(currentplayer);
-                PhaseThree(currentplayer);
-
-                Send("", currentplayer, null); //disable menu
+                if (currentplayer.CardsOnTable.All(x => x.Name != CardName.Jail)) {
+                    PhaseOne(currentplayer);
+                    //TODO PhaseTwo(currentplayer);
+                    PhaseThree(currentplayer);
+                    Send("", currentplayer, null); //disable menu
+                } else {
+                    Dealer.Discard(currentplayer, currentplayer.CardsOnTable.First(x => x.Name == CardName.Jail));
+                }
                 foreach (var p in Players) {
                     p.PlayerListMsg = null;
                     p.TurnMsg = null;
                     p.Choice = null; //just to be sure
                 }
-                Turn++;
             }
         }
 
@@ -185,10 +189,30 @@ namespace BangGameBot
 
         private void CheckDynamiteAndJail(Player curplayer) {
             if (curplayer.CardsOnTable.Any(x => x.Name == CardName.Dynamite)) {
-                //TODO
+                var dynamite = curplayer.CardsOnTable.First(x => x.Name == CardName.Dynamite);
+                var card = Draw(curplayer);
+                if (card.Number < 10 && card.Suit == CardSuit.Spades) {
+                    SendToEveryone("The dynamite explodes!");
+                    HitPlayer(curplayer, 3);
+                    Dealer.Discard(curplayer, dynamite);
+                } else {
+                    Player nextplayer = Players[(Turn+1) % Players.Count()];
+                    SendToEveryone("The dynamite passes to " + nextplayer.Name);
+                    nextplayer.StealFrom(curplayer, dynamite);
+                    Dealer.PutPermCardOnTable(nextplayer, dynamite);
+                }
             }
             if (curplayer.CardsOnTable.Any(x => x.Name == CardName.Jail)) {
-                //TODO
+                var jail = curplayer.CardsOnTable.First(x => x.Name == CardName.Jail);
+                var card = Draw(curplayer);
+                if (card.Suit == CardSuit.Hearts) {
+                    SendToEveryone($"The Jail is discarded and {curplayer.Name} play their turn.");
+                    Dealer.Discard(curplayer, jail);
+                } else {
+                    SendToEveryone("{curplayer.Name} skips this turn. The Jail is discarded.");
+                    //StartGame() will discard jail
+                }
+                return;
             }
         }
 
@@ -248,7 +272,7 @@ namespace BangGameBot
                             DrawCards(curplayer, 1);
                             return;
                         }
-                        //if they chose no, it's exactly as another character.
+                        //if they chose no, it's exactly other characters.
                     }
 
                     DrawCards(curplayer, 2);
@@ -281,6 +305,8 @@ namespace BangGameBot
                 firsttime = false;
             }
         }
+
+
 
         private bool CanUseAbility(Player player) {
             switch (player.Character) {
@@ -324,7 +350,72 @@ namespace BangGameBot
             }
             return listofcards;
         }
-       
+
+        private Card Draw(Player player) {
+            if (player.Character == Character.LuckyDuke) {
+                var msg = "You are Lucky Duke. You draw two cards, then choose one.\n";
+                var result = Dealer.DrawCards(2, player);
+                var part2 = " drew " + result.Item1[0].GetDescription() + " and " + result.Item1[1].GetDescription() + (result.Item2 ? ", and reshuffled the deck." : ".");
+                Send(msg + "You" + part2 + " Choose a card.", player.Name + part2, player, MakeMenuFromCards(result.Item1));
+                var cardchosen = WaitForChoice(player, 30).CardChosen ?? DefaultChoice.ChooseCardFrom(result.Item1);
+                Send("You chose " + cardchosen.GetDescription(), player.Name + " chose " + cardchosen.GetDescription(), player);
+                Dealer.Discard(player, result.Item1.First(x => x != cardchosen));
+                Dealer.Discard(player, cardchosen);
+                return cardchosen;
+            } else {
+                var result = Dealer.DrawToGraveyard();
+                var card = result.Item1;
+                var reshuffled = result.Item2;
+                Send("You drew " + card.GetDescription() + (reshuffled ? ", then reshuffled the deck." : ""), player.Name + " drew " + card.GetDescription() (reshuffled ? ", then reshuffled the deck." : ""), player);
+                return card;
+            }
+        }
+
+        private void HitPlayer(Player target, int lives, Player attacker = null) {
+            target.Lives -= lives;
+            var msgfortarget = "You lose " + lives + " lives.";
+            var msgforothers = target.Name + " loses " + lives + "lives.";
+            if (target.Lives <= 0) {
+                target.Lives = 0;
+                msgfortarget += "\n\nYou are out of lives! You died.";
+                msgforothers += "\n\n" + target.Name + " is out of lives! " + target.Name + " was " + target.Role;
+                Send(msgfortarget, msgforothers, target);
+                Players.Remove(target);
+                DeadPlayers.Add(target);
+                if (Players.Any(x => x.Character == Character.VultureSam)) {
+                    var vulturesam = Players.First(x => x.Character == Character.VultureSam);
+                    foreach (var c in target.Cards)
+                        vulturesam.StealFrom(target, c);
+                    var msgforvs = msgforothers + "\nYou take in hand all of " + target.Name + "'s cards.";
+                    msgforothers = vulturesam.Name + " takes in hand all of " + target.Name + "'s cards.";
+                    Send(msgforvs, msgforothers, vulturesam);
+                } else {
+                    if (attacker != null && target.Role == Role.Outlaw) {
+                        Send("You draw three cards as a reward.", attacker.Name + " draws three cards as a reward.", attacker);
+                        DrawCards(attacker, 3);
+                    }
+                    SendToEveryone(target.Name + " discards all the cards.\n" + target.Cards.Aggregate("", (s, c) => s + c.GetDescription() + ", ").TrimEnd(',', ' ') + " go into the graveyard.");
+                    foreach (var c in target.Cards)
+                        Dealer.Discard(target, c);
+                }
+                return;
+            } else {
+                Send(msgfortarget, msgforothers, target);
+                switch (target.Character) {
+                    case Character.BartCassidy:
+                        DrawCards(target, lives);
+                        return;
+                    case Character.ElGringo:
+                        if (attacker != null) {
+                            var card = target.StealFrom(attacker).GetDescription();
+                            Send("You stole {card} from {attacker.Name}'s hand.", $"{target.Name} stole a card from {attacker.Name}'s hand.", target);
+                        }
+                        return;
+                    default:
+                        return;
+                }
+            }
+        }
 
         private void UsePanic(Player curplayer, bool jessejonesability = false) {
             var possiblechoices = jessejonesability ? Players.Where(x => x != curplayer && x.Lives > 0 && x.CardsInHand.Count() > 0) : Players.Where(x => x.Lives > 0 && x.Cards.Count() > 0 && curplayer.DistanceSeen(x, Players) == 1);
@@ -436,7 +527,7 @@ namespace BangGameBot
         /// Send the turn message to all the players except the ones in the list
         /// </summary>
         private void SendToEveryone (string text, List<Player> except, IReplyMarkup menu = null) {
-            foreach (var p in Players)
+            foreach (var p in Players.Union(DeadPlayers))
                 if (!except.Contains(p))
                     Send(text, p, menu);
         }
@@ -445,9 +536,12 @@ namespace BangGameBot
         /// Send the turn message to all the players except the specified
         /// </summary>
         private void SendToEveryone (string text, Player except = null, IReplyMarkup menu = null) {
-            foreach (var p in Players)
-                if (p != except)
-                    Send(text, p, menu);
+            SendToEveryone(text, except.ToSinglet().ToList(), menu);
+        }
+
+        private void Send (string textforplayer, string textforothers, Player p, IReplyMarkup menu = null) {
+            Send(textforplayer, p, menu);
+            SendToEveryone(textforothers, p);
         }
 
         private Choice WaitForChoice(Player p, int maxseconds) {
