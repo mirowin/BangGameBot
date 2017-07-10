@@ -116,7 +116,7 @@ namespace BangGameBot
                     PhaseThree(currentplayer);
                     Send("", currentplayer, null); //disable menu
                 } else {
-                    Dealer.Discard(currentplayer, currentplayer.CardsOnTable.First(x => x.Name == CardName.Jail));
+                    Discard(currentplayer, currentplayer.CardsOnTable.First(x => x.Name == CardName.Jail));
                 }
                 foreach (var p in Players) {
                     p.PlayerListMsg = null;
@@ -173,9 +173,7 @@ namespace BangGameBot
                 p.Character = charsToAssign[Program.R.Next(charsToAssign.Count())];
                 charsToAssign.Remove(p.Character);
                 //assign lives
-                p.Lives = new[] { Character.PaulRegret, Character.ElGringo }.Contains(p.Character) ? 3 : 4;
-                if (p.Role == Role.Sheriff)
-                    p.Lives++;
+                p.SetLives();
             }
             return;
         }
@@ -194,7 +192,7 @@ namespace BangGameBot
                 if (card.Number < 10 && card.Suit == CardSuit.Spades) {
                     SendToEveryone("The dynamite explodes!");
                     HitPlayer(curplayer, 3);
-                    Dealer.Discard(curplayer, dynamite);
+                    Discard(curplayer, dynamite);
                 } else {
                     Player nextplayer = Players[(Turn+1) % Players.Count()];
                     SendToEveryone("The dynamite passes to " + nextplayer.Name);
@@ -207,7 +205,7 @@ namespace BangGameBot
                 var card = Draw(curplayer);
                 if (card.Suit == CardSuit.Hearts) {
                     SendToEveryone($"The Jail is discarded and {curplayer.Name} play their turn.");
-                    Dealer.Discard(curplayer, jail);
+                    Discard(curplayer, jail);
                 } else {
                     SendToEveryone("{curplayer.Name} skips this turn. The Jail is discarded.");
                     //StartGame() will discard jail
@@ -225,7 +223,7 @@ namespace BangGameBot
                     cardsdrawn = DrawCards(curplayer, 3);
                     Send("Choose the card to discard", curplayer, MakeMenuFromCards(cardsdrawn));
                     var cardchosen = WaitForChoice(curplayer, 30)?.CardChosen ?? DefaultChoice.ChooseCard;
-                    card = Dealer.Discard(curplayer, cardchosen);
+                    card = Discard(curplayer, cardchosen);
                     Send("You discarded " + card.GetDescription(), curplayer);
                     SendToEveryone(curplayer.Name + " discarded " + card.GetDescription(), curplayer);
                     return;
@@ -283,6 +281,7 @@ namespace BangGameBot
 
         private void PhaseThree(Player curplayer) {
             bool firsttime = true;
+            var discarded = 0;
             while (true) {
                 var msg = "";
                 var discard = curplayer.CardsInHand.Count() > curplayer.Lives;
@@ -296,13 +295,20 @@ namespace BangGameBot
                     break;
                 var cardchosen = choice?.CardChosen ?? DefaultChoice.ChooseCard;
                 if (cardchosen != null || discard) {
-                    var card = Dealer.Discard(curplayer, cardchosen);
+                    var card = Discard(curplayer, cardchosen);
                     Send("You discarded " + card.GetDescription(), curplayer, MakeCardsInHandMenu(curplayer, true));
                     SendToEveryone(curplayer.Name + " discarded " + card.GetDescription(), curplayer);
                 }
                 else
                     break;
                 firsttime = false;
+                discarded++;
+                if (curplayer.Character == Character.SidKetchum && discarded == 2 && curplayer.Lives < curplayer.MaxLives) {
+                    Send("You discarded two cards. Do you want to use your ability and regain one life point?", curplayer, MakeBoolMenu("Yes", "No"));
+                    if (WaitForChoice(curplayer, 30)?.ChoseYes ?? DefaultChoice.UseAblityPhaseThree) {
+                        curplayer.AddLives(1);
+                    }
+                }
             }
         }
 
@@ -340,13 +346,21 @@ namespace BangGameBot
                 for (var i = 0; i < reshuffled; i++) {
                     msgforp += listofcards[i].GetDescription() + ", ";
                 }
-                msgforp = msgforp.TrimEnd(' ',',') + "from the deck.\nThe deck was reshuffled.\nYou drew ";
-                for (var i = reshuffled; i < listofcards.Count(); i++) {
-                    msgforp += listofcards[i].GetDescription() + ", ";
+                msgforp = msgforp.TrimEnd(' ', ',') + "from the deck.\nThe deck was reshuffled.";
+                if (reshuffled < listofcards.Count()) {
+                    msgforp += "\nYou drew ";
+                    for (var i = reshuffled; i < listofcards.Count(); i++) {
+                        msgforp += listofcards[i].GetDescription() + ", ";
+                    }
+                    msgforp = msgforp.TrimEnd(' ', ',') + "from the deck.";
+                    Send(msgforp, p);
+                    SendToEveryone(p.Name + "drew " + (reshuffled + 1).ToString() + " cards from the deck.\nThe deck was reshuffled."
+                        + (
+                            listofcards.Count() - reshuffled > 0 ?
+                            ("\n" + p.Name + "drew " + (listofcards.Count() - reshuffled).ToString() + " cards from the deck.") : 
+                            ""
+                        ), p);
                 }
-                msgforp = msgforp.TrimEnd(' ', ',') + "from the deck.";
-                Send(msgforp, p);
-                SendToEveryone(p.Name + "drew " + (reshuffled + 1).ToString() + " cards from the deck.\nThe deck was reshuffled.\n" + p.Name + "drew " + (listofcards.Count()-reshuffled).ToString() + " cards from the deck.", p);
             }
             return listofcards;
         }
@@ -355,28 +369,34 @@ namespace BangGameBot
             if (player.Character == Character.LuckyDuke) {
                 var msg = "You are Lucky Duke. You draw two cards, then choose one.\n";
                 var result = Dealer.DrawCards(2, player);
-                var part2 = " drew " + result.Item1[0].GetDescription() + " and " + result.Item1[1].GetDescription() + (result.Item2 ? ", and reshuffled the deck." : ".");
+                var part2 = " drew " + result.Item1[0].GetDescription() + " and " + result.Item1[1].GetDescription() + (result.Item2 > -1 ? ", and reshuffled the deck." : ".");
                 Send(msg + "You" + part2 + " Choose a card.", player.Name + part2, player, MakeMenuFromCards(result.Item1));
                 var cardchosen = WaitForChoice(player, 30).CardChosen ?? DefaultChoice.ChooseCardFrom(result.Item1);
                 Send("You chose " + cardchosen.GetDescription(), player.Name + " chose " + cardchosen.GetDescription(), player);
-                Dealer.Discard(player, result.Item1.First(x => x != cardchosen));
-                Dealer.Discard(player, cardchosen);
+                Discard(player, result.Item1.First(x => x != cardchosen));
+                Discard(player, cardchosen);
                 return cardchosen;
             } else {
                 var result = Dealer.DrawToGraveyard();
                 var card = result.Item1;
                 var reshuffled = result.Item2;
-                Send("You drew " + card.GetDescription() + (reshuffled ? ", then reshuffled the deck." : ""), player.Name + " drew " + card.GetDescription() (reshuffled ? ", then reshuffled the deck." : ""), player);
+                Send("You drew " + card.GetDescription() + (reshuffled ? ", then reshuffled the deck." : ""), player.Name + " drew " + card.GetDescription() + (reshuffled ? ", then reshuffled the deck." : ""), player);
                 return card;
             }
         }
 
+        private Card Discard(Player p, Card c) {
+            var result = Dealer.Discard(p, c);
+            if (p.Character == Character.SuzyLafayette && p.Lives > 0 && p.CardsInHand.Count() == 0) {
+                DrawCards(p, 1);
+            }
+        }
+
         private void HitPlayer(Player target, int lives, Player attacker = null) {
-            target.Lives -= lives;
+            target.AddLives(-lives);
             var msgfortarget = "You lose " + lives + " lives.";
             var msgforothers = target.Name + " loses " + lives + "lives.";
-            if (target.Lives <= 0) {
-                target.Lives = 0;
+            if (target.Lives == 0) {
                 msgfortarget += "\n\nYou are out of lives! You died.";
                 msgforothers += "\n\n" + target.Name + " is out of lives! " + target.Name + " was " + target.Role;
                 Send(msgfortarget, msgforothers, target);
@@ -396,7 +416,7 @@ namespace BangGameBot
                     }
                     SendToEveryone(target.Name + " discards all the cards.\n" + target.Cards.Aggregate("", (s, c) => s + c.GetDescription() + ", ").TrimEnd(',', ' ') + " go into the graveyard.");
                     foreach (var c in target.Cards)
-                        Dealer.Discard(target, c);
+                        Discard(target, c);
                 }
                 return;
             } else {
@@ -510,16 +530,24 @@ namespace BangGameBot
             return;
         }
 
+
         /// <summary>
         /// Send the specified text and menu to Player p. To be used only during Turn!
         /// </summary>
-        private void Send(string text, Player p, IReplyMarkup menu = null) {
-            //TODO use a queue or something, store the messages to send and send only when a menu is sent or disabled.
-            if (p.TurnMsg == null)
-                p.TurnMsg = Bot.Send(text, p.Id, menu).Result;
-            else
-                //TODO remove one of the \n's and choose each time if there should be some more space.
-                p.TurnMsg = Bot.Edit(p.TurnMsg.Text + "\n\n" + text, p.TurnMsg, menu).Result;
+        private void Send(string text, Player p, IReplyMarkup menu = null, bool addextraspace = true) {
+            //TODO complete refactoring of this. The Send methods are a real mess.
+            throw new NotImplementedException();
+//            if (p.TurnMsg == null)
+//                p.TurnMsg = Bot.Send(p.QueuedMsg, p.Id, menu).Result;
+//            else {
+//                p.QueuedMsg += "\n" + (addextraspace ? "\n" : "") + text;
+//                if ((menu == null && p.HasMenuActive) || (menu != null && !p.HasMenuActive)) {
+//                    //TODO remove one of the \n's and choose each time if there should be some more space.
+//                    p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, menu).Result;
+//                    p.HasMenuActive = menu != null;
+//                    p.QueuedMsg = "";
+//                }
+//            }
         }
 
 
