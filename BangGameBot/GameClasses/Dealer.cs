@@ -1,93 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Telegram.Bot;
-using Telegram.Bot.Types;
 
 namespace BangGameBot
 {
-    public class Player
-    {
-        public long Id { get; }
-        public string Name { get; }
-        public User TelegramUser { get; }
-        public Message PlayerListMsg = null;
-        public Message TurnMsg = null;
-        public string QueuedMsg = "";
-        public bool HasMenuActive;
-        public bool VotedToStart = false;
-        public Choice Choice = null;
-        public List<Card> Cards = new List<Card>();
-        public int Lives { get; private set; }
-        public Character Character;
-        public Role Role;
-        public Card Weapon = null;
-        public List<Card> CardsOnTable {
-            get { 
-                var r = Cards.Where(x => x.IsOnTable).ToList();
-                if (r.Any(x => x.Type == CardType.Normal))
-                    throw new Exception($"Card on table is normal");
-                return r;
-            }
-        }
-        public List<Card> CardsInHand {
-            get { return Cards.Where(x => !x.IsOnTable).ToList(); }
-        }
-        public int MaxLives { 
-            get { return (Role == Role.Sheriff ? 1 : 0) + (new[] { Character.PaulRegret, Character.ElGringo }.Contains(Character) ? 3 : 4); }
-        }
-
-        public Player (User u) {
-            TelegramUser = u;
-            Id = u.Id;
-            Name = (u.FirstName.Length < 10 ? u.FirstName : u.FirstName.Substring(0, 10) + "...").FormatHTML();
-        }
-
-        /// <summary>
-        /// Steals card c from player p. If card is null, a random card from hand is chosen. Returns the stolen card
-        /// </summary>
-        public Card StealFrom(Player p, Card c = null) {
-            if (c == null) 
-                c = p.ChooseCardFromHand();
-            c.IsOnTable = false;
-            p.Cards.Remove(c);
-            this.Cards.Add(c);
-            return c;
-        }
-
-        public void SetLives() {
-            Lives = MaxLives;
-        }
-
-        public void AddLives(int n) {
-            Lives += n;
-            if (Lives > MaxLives)
-                Lives = MaxLives;
-            if (Lives < 0)
-                Lives = 0;
-        }
-    }
-
-    public class Card 
-    {
-        public CardName Name { get; }
-        public CardType Type { get; }
-        public bool IsOnTable { get; set; } = false;
-        public int Number { get; }
-        public CardSuit Suit { get; }
-        public Card (CardName t, int n, CardSuit s) {
-            Name = t;
-            Number = n;
-            Suit = s;
-            Type = t.CompareTo(CardName.Saloon) > 0 ? (t.CompareTo(CardName.Mustang) > 0 ? CardType.Weapon : CardType.PermCard) : CardType.Normal;
-        }
-    }
-
-    public class Dealer 
+    public class Dealer
     {
         public List<Card> Deck { get; private set; } = new List<Card>();
         public List<Card> Graveyard { get; private set; } = new List<Card>();
-        public Dealer () {
+        public Dealer()
+        {
             MakeNewDeck();
 
             Deck.Shuffle();
@@ -103,13 +25,15 @@ namespace BangGameBot
         /// 1. The cards drawn.
         /// 2. The position where the deck was reshuffled. (-1 if it wasn't)
         /// </summary>
-        public Tuple<List<Card>,int> DrawCards (int n, Player p) {
+        public Tuple<List<Card>, int> DrawCards(int n, Player p)
+        {
             var index = -1;
             var cards = new List<Card>();
-            for (var i = 0; i < n; i++) {
+            for (var i = 0; i < n; i++)
+            {
                 var tuple = RemoveCard();
                 if (tuple.Item2)
-                    index = i+1;
+                    index = i + 1;
                 p.Cards.Add(tuple.Item1);
                 cards.Add(tuple.Item1);
             }
@@ -124,7 +48,8 @@ namespace BangGameBot
         /// 2. Whether the deck was reshuffled after drawing the card.
         /// </summary>
         /// <returns>The to graveyard.</returns>
-        public Tuple<Card, bool> DrawToGraveyard () {
+        public Tuple<Card, bool> DrawToGraveyard()
+        {
             SendToGraveyard(Deck[0]);
             return RemoveCard();
         }
@@ -132,7 +57,8 @@ namespace BangGameBot
         /// <summary>
         /// Player p discards card c. If c is null, discards a random card from hand. Returns the discarded card
         /// </summary>
-        public Card Discard (Player p, Card c = null) {
+        public Card Discard(Player p, Card c = null)
+        {
             if (c == null)
                 c = p.ChooseCardFromHand();
             p.Cards.Remove(c);
@@ -146,15 +72,18 @@ namespace BangGameBot
         /// <returns>The perm card on table.</returns>
         /// <param name="p">P.</param>
         /// <param name="card">Card.</param>
-        public Card PutPermCardOnTable(Player p, Card card) {
+        public Card PutPermCardOnTable(Player p, Card card)
+        {
             if (card.Type == CardType.Normal)
                 throw new ArgumentException("Player is putting non-permcard on table");
             if (card.IsOnTable)
                 throw new ArgumentException("Card already on table");
             card.IsOnTable = true;
             Card result = null;
-            if (card.Type == CardType.Weapon) {
-                if (p.Weapon != null) {
+            if (card.Type == CardType.Weapon)
+            {
+                if (p.Weapon != null)
+                {
                     result = p.Weapon;
                     Discard(p, p.Weapon);
                 }
@@ -168,7 +97,8 @@ namespace BangGameBot
         /// </summary>
         /// <returns>The from graveyard.</returns>
         /// <param name="p">P.</param>
-        public Card DrawFromGraveyard(Player p) {
+        public Card DrawFromGraveyard(Player p)
+        {
             //only pedro ramirez can!
             if (p.Character != Character.PedroRamirez)
                 throw new ArgumentException("Someone is stealing from graveyard!");
@@ -181,27 +111,32 @@ namespace BangGameBot
         /// <summary>
         /// Removes a card from the Deck object, and reshuffles the deck if needed.
         /// </summary>
-        private Tuple<Card,bool> RemoveCard () {
+        private Tuple<Card, bool> RemoveCard()
+        {
             var card = Deck[0];
             Deck.Remove(card);
             var deckshuffled = false;
-            if (Deck.Count() == 0) {
+            if (Deck.Count() == 0)
+            {
                 deckshuffled = true;
                 Deck.AddRange(Graveyard);
                 Graveyard.Clear();
                 Deck.Shuffle();
                 Deck.Shuffle();
             }
-            return new Tuple<Card, bool>(card,deckshuffled);
+            return new Tuple<Card, bool>(card, deckshuffled);
         }
 
-        private void SendToGraveyard(Card c) {
+        private void SendToGraveyard(Card c)
+        {
             c.IsOnTable = false;
             Graveyard.Add(c);
         }
 
-        private void MakeNewDeck() {
-            for (int i = 2; i <= 14; i++) {
+        private void MakeNewDeck()
+        {
+            for (int i = 2; i <= 14; i++)
+            {
                 //Bang!
                 if (i <= 9)
                     Deck.Add(new Card(CardName.Bang, i, CardSuit.Clubs));
@@ -266,69 +201,4 @@ namespace BangGameBot
             Deck.Add(new Card(CardName.Winchester, 8, CardSuit.Spades));
         }
     }
-
-    public class Choice {
-        public Card CardChosen { get; } = null;
-        public bool? ChoseYes { get; } = null;
-        public Player PlayerChosen { get; } = null;
-
-        public Choice (bool choice) {
-            ChoseYes = choice;
-        }
-
-        public Choice (Card choice) {
-            CardChosen = choice;
-        }
-
-        public Choice (Player p) {
-            PlayerChosen = p;
-        }
-    }
-
-    public static class DefaultChoice {
-        public static readonly bool UseAbilityPhaseOne = false;
-        public static Player ChoosePlayer(List<Player> players) {
-            return players.Random();
-        }
-        public static readonly Card ChooseCard = null;
-        public static Card ChooseCardFrom(List<Card> cards) {
-            return cards.Random();
-        }
-        public static readonly bool DiscardCard = false;
-        public static readonly bool UseAblityPhaseThree = false;
-    }
-
-    public enum CardName {
-        //Cards
-        Bang, Missed, Beer, Panic, CatBalou, Stagecoach, WellsFargo, Gatling, Duel, Indians, GeneralStore, Saloon,
-        //PermCards
-        Jail, Dynamite, Barrel, Scope, Mustang,
-        //Weapons
-        Volcanic, Schofield, Remington, RevCarabine, Winchester
-    }
-
-    public enum CardSuit {
-        Hearts, Diamonds, Clubs, Spades
-    }
-
-    public enum Character {
-        PaulRegret, Jourdounnais, BlackJack, SlabTheKiller, ElGringo, JesseJones, SuzyLafayette, WillyTheKid, RoseDoolan, BartCassidy, PedroRamirez, SidKetchum, LuckyDuke, VultureSam, CalamityJanet, KitCarlson
-    }
-
-    public enum Role {
-        Sheriff, DepSheriff, Renegade, Outlaw
-    }
-
-    public enum GameStatus {
-        Joining, Running, Ending
-    }
-
-    public enum CardType {
-        Normal, PermCard, Weapon
-    }
-
-    public enum ErrorMessage {
-        NoError, NoPlayersToStealFrom
-    }
 }
-

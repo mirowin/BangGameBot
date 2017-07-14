@@ -26,7 +26,7 @@ namespace BangGameBot
         }
 
         public static Card ChooseCardFromHand(this Player p){
-            return p.CardsInHand.Random<Card>();
+            return p.CardsInHand.Random();
         }
 
         public static int DistanceSeen(this Player source, Player target, List<Player> players) {
@@ -134,7 +134,7 @@ namespace BangGameBot
                     numberstring = c.Number.ToString();
                     break;
             }
-            return c.Name.GetString <CardName>() + "[" + numberstring + c.Suit.ToEmoji() + "]";
+            return c.Name.GetString<CardName>() + "[" + numberstring + c.Suit.ToEmoji() + "]";
         }
 
         public static string Encode(this Card c) {
