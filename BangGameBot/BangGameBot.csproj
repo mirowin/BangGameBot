@@ -47,9 +47,15 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Handler.cs" />
-    <Compile Include="Game.cs" />
-    <Compile Include="GameClasses.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="Game\Communication.cs" />
+    <Compile Include="Game\Game.cs" />
+    <Compile Include="Game\GameMechanics.cs" />
+    <Compile Include="GameClasses\Card.cs" />
+    <Compile Include="GameClasses\Choice.cs" />
+    <Compile Include="GameClasses\Dealer.cs" />
+    <Compile Include="GameClasses\Enums.cs" />
+    <Compile Include="GameClasses\Player.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

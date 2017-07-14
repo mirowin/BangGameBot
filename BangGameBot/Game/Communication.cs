@@ -32,12 +32,12 @@ namespace BangGameBot
             return new InlineKeyboardMarkup(buttons.ToArray());
         }
 
-        private InlineKeyboardMarkup MakeMenuFromCards(List<Card> list)
+        private List<InlineKeyboardButton[]> MakeMenuFromCards(List<Card> list)
         {
             var buttons = new List<InlineKeyboardButton[]>();
             foreach (var c in list)
                 buttons.Add(new InlineKeyboardButton(c.GetDescription(), $"{Id}|card|{c.Encode()}").ToSinglet());
-            return new InlineKeyboardMarkup(buttons.ToArray());
+            return buttons;
         }
 
         private void SendPlayerList(Player p = null)
@@ -69,40 +69,46 @@ namespace BangGameBot
             return;
         }
 
-
-        /// <summary>
-        /// Send the specified text and menu to Player p. To be used only during Turn!
-        /// </summary>
-        private void Send(string text, Player p, IReplyMarkup menu = null, bool addextraspace = true)
+        private void Tell(string textforp, Player p, string textforothers = null, bool addextraspace = true)
         {
-            throw new NotImplementedException();
+            if (addextraspace)
+            {
+                textforp = "\n" + textforp;
+                textforothers = "\n" + textforothers;
+            }
+            p.QueuedMsg += textforp + "\n";
+            foreach (var pl in Players.Where(x => x.Id != p.Id))
+                pl.QueuedMsg += textforothers + "\n";
+            return;
         }
 
-
-        /// <summary>
-        /// Send the turn message to all the players except the ones in the list
-        /// </summary>
-        private void SendToEveryone(string text, List<Player> except, IReplyMarkup menu = null)
+        private void TellEveryone(string text, bool addextraspace = true, Player[] except = null)
         {
-            foreach (var p in Players.Union(DeadPlayers))
-                if (!except.Contains(p))
-                    Send(text, p, menu);
+            foreach (var p in Players.Where(x => !except?.Contains(x) ?? true))
+                Tell(text, p, null, addextraspace);
+            return;
         }
 
-        /// <summary>
-        /// Send the turn message to all the players except the specified
-        /// </summary>
-        private void SendToEveryone(string text, Player except = null, IReplyMarkup menu = null)
+        private void SendMessages (Player[] menurecipients = null, IReplyMarkup menu = null)
         {
-            SendToEveryone(text, except.ToSinglet().ToList(), menu);
+            menurecipients = menurecipients ?? Players.ToArray();
+            foreach (var p in Players)
+            {
+                if (p.TurnMsg == null)
+                    p.TurnMsg = Bot.Send(p.QueuedMsg, p.Id, (menurecipients.Contains(p) ? (menu ?? null) : null)).Result;
+                else
+                    p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, (menurecipients.Contains(p) ? (menu ?? null) : null)).Result;
+                p.QueuedMsg = "";
+            }
+            return;
         }
 
-        private void Send(string textforplayer, string textforothers, Player p, IReplyMarkup menu = null)
+        private void SendMessages(Player menurecipient, IReplyMarkup menu = null)
         {
-            Send(textforplayer, p, menu);
-            SendToEveryone(textforothers, p);
+            SendMessages(menurecipient.ToSinglet(), menu);
+            return;
         }
-
+        
         private Choice WaitForChoice(Player p, int maxseconds)
         {
             p.Choice = null;
