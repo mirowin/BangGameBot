@@ -50,7 +50,7 @@ namespace BangGameBot
         /// <returns>The to graveyard.</returns>
         public Tuple<Card, bool> DrawToGraveyard()
         {
-            SendToGraveyard(Deck[0]);
+            SendToGraveyard(Deck.Last());
             return RemoveCard();
         }
 
@@ -73,7 +73,7 @@ namespace BangGameBot
                 throw new ArgumentException("Someone is putting a card into the deck!");
             p.Cards.Remove(c);
             c.IsOnTable = false;
-            Deck.Insert(0, c);
+            Deck.Add(c);
             return;
         }
 
@@ -124,7 +124,7 @@ namespace BangGameBot
         /// </summary>
         private Tuple<Card, bool> RemoveCard()
         {
-            var card = Deck[0];
+            var card = Deck.Last();
             Deck.Remove(card);
             var deckshuffled = false;
             if (Deck.Count() == 0)
