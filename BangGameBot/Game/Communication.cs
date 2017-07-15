@@ -69,7 +69,7 @@ namespace BangGameBot
             return;
         }
 
-        private void Tell(string textforp, Player p, string textforothers = null, bool addextraspace = true)
+        private void Tell(string textforp, Player p, bool addextraspace, string textforothers = null)
         {
             if (addextraspace)
             {
@@ -85,7 +85,7 @@ namespace BangGameBot
         private void TellEveryone(string text, bool addextraspace = true, Player[] except = null)
         {
             foreach (var p in Players.Where(x => !except?.Contains(x) ?? true))
-                Tell(text, p, null, addextraspace);
+                Tell(text, p, addextraspace, null);
             return;
         }
 

@@ -157,19 +157,19 @@ namespace BangGameBot
             switch (curplayer.Character)
             {
                 case Character.KitCarlson:
-                    Tell("You are Kit Carlson. You draw 3 cards from the deck, then choose one to put back at the top of the deck.", curplayer);
+                    Tell("You are Kit Carlson. You draw 3 cards from the deck, then choose one to put back at the top of the deck.", curplayer, true);
                     cardsdrawn = DrawCards(curplayer, 3);
-                    Tell("Choose the card to put back into the deck.", curplayer, null, false);
+                    Tell("Choose the card to put back into the deck.", curplayer, false, null);
                     SendMessages(curplayer, new InlineKeyboardMarkup(MakeMenuFromCards(cardsdrawn).ToArray()));
                     var cardchosen = (WaitForChoice(curplayer, 30)?.CardChosen ?? DefaultChoice.ChooseCardFrom(cardsdrawn));
                     Dealer.PutIntoDeck(curplayer, cardchosen);
-                    Tell($"You put {cardchosen.GetDescription()} back at the top of the deck.", curplayer, $"{curplayer.Name} put a card back at the top the deck", false);
+                    Tell($"You put {cardchosen.GetDescription()} back at the top of the deck.", curplayer, false, $"{curplayer.Name} put a card back at the top the deck");
                     break;
                 case Character.BlackJack:
-                    Tell("You are Black Jack. You show the second card you draw; on Hearts or Diamonds, you draw one more card.", curplayer);
+                    Tell("You are Black Jack. You show the second card you draw; on Hearts or Diamonds, you draw one more card.", curplayer, true);
                     var secondcard = DrawCards(curplayer, 2)[1];
                     var heartsordiamonds = secondcard.Suit == CardSuit.Hearts || secondcard.Suit == CardSuit.Diamonds;
-                    Tell($"The second card was {secondcard.Suit.ToEmoji()}, so you " + (heartsordiamonds ? "" : "can't ") + "draw another card", curplayer, $"{curplayer.Name} drew {secondcard.GetDescription()}, so they " + (heartsordiamonds ? "" : "can't ") + "draw another card", false);
+                    Tell($"The second card was {secondcard.Suit.ToEmoji()}, so you " + (heartsordiamonds ? "" : "can't ") + "draw another card", curplayer, false, $"{curplayer.Name} drew {secondcard.GetDescription()}, so they " + (heartsordiamonds ? "" : "can't ") + "draw another card");
                     if (heartsordiamonds)
                         DrawCards(curplayer, 1);
                     break;
@@ -183,7 +183,7 @@ namespace BangGameBot
                                 "You are Jesse Jones: you can draw your first card from the hand of a player." :
                                 $"You are Pedro Ramirez: you can draw your first card from the top of the graveyard. ({Dealer.Graveyard.Last().GetDescription()})") +
                             "\nDo you want to use your ability or do you want to draw from the deck?",
-                            curplayer);
+                            curplayer, true);
                         SendMessages(curplayer, MakeBoolMenu("Use ability", "Draw from deck"));
 
                         //now let's see what they chose
@@ -197,7 +197,7 @@ namespace BangGameBot
                             else
                             {
                                 var card = Dealer.DrawFromGraveyard(curplayer).GetDescription();
-                                Tell($"You drew {card} from the graveyard", curplayer, $"{curplayer.Name} drew {card} from the graveyard", false);
+                                Tell($"You drew {card} from the graveyard", curplayer, false, $"{curplayer.Name} drew {card} from the graveyard");
                                 break;
                             }
                             DrawCards(curplayer, 1);
@@ -225,7 +225,7 @@ namespace BangGameBot
                     if (discard)
                         //tell how many cards they have to discard
                         msg = "You need to discard at least " + (curplayer.CardsInHand.Count() - curplayer.Lives).ToString() + " cards.\n";
-                    Tell(msg + "Select the cards you want to discard.", curplayer, null, firsttime);
+                    Tell(msg + "Select the cards you want to discard.", curplayer, firsttime, null);
                 }
                 //send the menu
                 SendMessages(curplayer, MakeCardsInHandMenu(curplayer, true));
@@ -237,7 +237,7 @@ namespace BangGameBot
                 if (cardchosen != null || discard) //even if they are afk they need to discard anyway
                 {
                     var card = Discard(curplayer, cardchosen).GetDescription();
-                    Tell($"You discarded {card}" + card, curplayer, $"{curplayer.Name} discarded {card}", false);
+                    Tell($"You discarded {card}" + card, curplayer, false, $"{curplayer.Name} discarded {card}");
                 }
                 else
                     break;
@@ -245,10 +245,11 @@ namespace BangGameBot
                 firsttime = false;
                 discarded++;
 
+                //TODO: Fix sid ketchum! at ANY time he can do this.
                 //sid ketchum can regain a life by discarding two cards
                 if (curplayer.Character == Character.SidKetchum && discarded % 2 == 0 && curplayer.Lives < curplayer.MaxLives)
                 {
-                    Tell("You discarded two cards. Do you want to use your ability and regain one life point?", curplayer);
+                    Tell("You discarded two cards. Do you want to use your ability and regain one life point?", curplayer, true);
                     SendMessages(curplayer, MakeBoolMenu("Yes", "No"));
                     if (WaitForChoice(curplayer, 30)?.ChoseYes ?? DefaultChoice.UseAblityPhaseThree)
                         curplayer.AddLives(1);
@@ -267,9 +268,9 @@ namespace BangGameBot
             if (possiblechoices.Count() > 1)
             {
                 Tell(
-                    "Choose the player to steal from.\nThe number in parenthesis is the number of cards they have in their hand.", curplayer, 
-                    $"{curplayer.Name} has decided to steal their first card from a player's hand.", false
-                );
+                    "Choose the player to steal from.\nThe number in parenthesis is the number of cards they have in their hand.", curplayer,
+                    false
+, $"{curplayer.Name} has decided to steal their first card from a player's hand.");
                 //make the menu and send
                 var buttonslist = new List<InlineKeyboardButton[]>();
                 foreach (var p in possiblechoices)
@@ -282,7 +283,7 @@ namespace BangGameBot
                 playerchosen = possiblechoices.First(); //if possiblechoices.Any() is false, this is gonna throw an exception I like.
             
             //tell the player who is the target
-            Tell(possiblechoices.Count() == 1 ? $"The only player you can steal from is {playerchosen.Name}." : $"You chose to steal from {playerchosen.Name}.", curplayer, null, false);
+            Tell(possiblechoices.Count() == 1 ? $"The only player you can steal from is {playerchosen.Name}." : $"You chose to steal from {playerchosen.Name}.", curplayer, false, null);
 
             if (jessejonesability || playerchosen.CardsOnTable.Count() == 0)
             {
@@ -293,7 +294,7 @@ namespace BangGameBot
             if (!jessejonesability && playerchosen.CardsOnTable.Count() > 0)
             {
                 //choose the card
-                Tell("Choose which card to steal.", curplayer, $"{curplayer.Name} chose to steal a card from {playerchosen.Name}.", false);
+                Tell("Choose which card to steal.", curplayer, false, $"{curplayer.Name} chose to steal a card from {playerchosen.Name}.");
                 //make menu and send
                 var buttonslist = MakeMenuFromCards(playerchosen.CardsOnTable);
                 buttonslist.Add(new[] { new InlineKeyboardButton("Steal from hand", $"{Id}|bool|yes") });
@@ -310,14 +311,14 @@ namespace BangGameBot
             if (chosencard == null)
             {
                 //was from hand
-                Tell($"You stole {card} from {playerchosen.Name}'s hand.", curplayer, null, false);
-                Tell($"{curplayer.Name} stole you {card}", playerchosen, null, false);
+                Tell($"You stole {card} from {playerchosen.Name}'s hand.", curplayer, false, null);
+                Tell($"{curplayer.Name} stole you {card}", playerchosen, false, null);
                 TellEveryone($"{curplayer.Name} stole a card from {playerchosen.Name}'s hand.", false, new[] { curplayer, playerchosen });
             }
             else
             {
                 //was from table
-                Tell($"You stole {card} from {playerchosen.Name}.", curplayer, $"{curplayer.Name} stole {card} from {playerchosen.Name}.", false);
+                Tell($"You stole {card} from {playerchosen.Name}.", curplayer, false, $"{curplayer.Name} stole {card} from {playerchosen.Name}.");
             }
             SendMessages();
             return;
@@ -354,7 +355,7 @@ namespace BangGameBot
             var reshuffled = result.Item2;
             if (reshuffled == -1)
             {
-                Tell($"You drew {string.Join(", ", listofcards.Select(x => x.GetDescription()))} from the deck.", p, $"{p.Name} drew {listofcards.Count()} cards from the deck.", false);
+                Tell($"You drew {string.Join(", ", listofcards.Select(x => x.GetDescription()))} from the deck.", p, false, $"{p.Name} drew {listofcards.Count()} cards from the deck.");
             }
             else
             {
@@ -367,7 +368,7 @@ namespace BangGameBot
                     msgforp += $", then drew {string.Join(", ", cardsafter.Select(x => x.GetDescription()))}";
                     msgforothers += $", then drew {cardsafter.Count()} more cards";
                 }
-                Tell(msgforp + ".", p, msgforothers + ".", false);
+                Tell(msgforp + ".", p, false, msgforothers + ".");
             }
             return listofcards;
         }
@@ -376,16 +377,16 @@ namespace BangGameBot
         {
             if (player.Character == Character.LuckyDuke)
             {
-                Tell("You are Lucky Duke. You draw two cards, then choose one.", player, null, false);
+                Tell("You are Lucky Duke. You draw two cards, then choose one.", player, false, null);
                 //draw the cards, then send a menu to choose
                 var cards = DrawCards(player, 2);
-                Tell("Choose a card.", player, null, false);
+                Tell("Choose a card.", player, false, null);
                 SendMessages(player, new InlineKeyboardMarkup(MakeMenuFromCards(cards).ToArray()));
 
                 //tell people the two cards
                 var cardchosen = WaitForChoice(player, 30).CardChosen ?? DefaultChoice.ChooseCardFrom(cards);
                 var carddiscarded = cards.First(x => x != cardchosen);
-                Tell($"You choose {cardchosen.GetDescription()} and discard {carddiscarded.GetDescription()}.", player, $"{player.Name} chose {cardchosen.GetDescription()} and discarded {carddiscarded.GetDescription()}.", false);
+                Tell($"You choose {cardchosen.GetDescription()} and discard {carddiscarded.GetDescription()}.", player, false, $"{player.Name} chose {cardchosen.GetDescription()} and discarded {carddiscarded.GetDescription()}.");
                 
                 //discard the cards
                 Discard(player, carddiscarded);
@@ -397,7 +398,7 @@ namespace BangGameBot
                 var result = Dealer.DrawToGraveyard();
                 var card = result.Item1;
                 var reshuffled = result.Item2;
-                Tell($"You drew {card.GetDescription()}" + (reshuffled ? ", then reshuffled the deck." : ""), player, $"{player.Name} drew {card.GetDescription()}" + (reshuffled ? ", then reshuffled the deck." : ""), false);
+                Tell($"You drew {card.GetDescription()}" + (reshuffled ? ", then reshuffled the deck." : ""), player, false, $"{player.Name} drew {card.GetDescription()}" + (reshuffled ? ", then reshuffled the deck." : ""));
                 return card;
             }
         }
@@ -421,11 +422,11 @@ namespace BangGameBot
         private void HitPlayer(Player target, int lives, Player attacker = null)
         {
             target.AddLives(-lives);
-            Tell($"You lose {lives} lives.", target, $"{target.Name} loses {lives} lives.");
+            Tell($"You lose {lives} lives.", target, true, textforothers: $"{target.Name} loses {lives} lives.");
             //TODO Deal with beers here!!
             if (target.Lives == 0)
             {
-                Tell($"You're out of lives! You died.", target, $"{target.Name} died! {target.Name} was {target.Role.GetString<Role>()}", true);
+                Tell($"You're out of lives! You died.", target, true, $"{target.Name} died! {target.Name} was {target.Role.GetString<Role>()}");
                 Players.Remove(target);
                 DeadPlayers.Add(target);
 
@@ -434,13 +435,13 @@ namespace BangGameBot
                 {
                     foreach (var c in target.Cards)
                         vulturesam.StealFrom(target, c);
-                    Tell($"You take in hand all {target.Name}'s cards.", vulturesam, $"{vulturesam.Name} takes in hand all {target.Name}'s cards.", false);
+                    Tell($"You take in hand all {target.Name}'s cards.", vulturesam, false, $"{vulturesam.Name} takes in hand all {target.Name}'s cards.");
                 }
                 else
                 {
                     if (attacker != null && target.Role == Role.Outlaw)
                     {
-                        Tell("You draw three cards as a reward.", attacker, $"{attacker.Name} draws three cards as a reward.", false);
+                        Tell("You draw three cards as a reward.", attacker, false, $"{attacker.Name} draws three cards as a reward.");
                         DrawCards(attacker, 3);
                     }
                     TellEveryone($"{target.Name} discards all the cards: " + string.Join(", ", target.Cards.Select(x => x.GetDescription())));
@@ -459,8 +460,8 @@ namespace BangGameBot
                         if (attacker != null)
                         {
                             var card = target.StealFrom(attacker).GetDescription();
-                            Tell($"You stole {card} from {attacker.Name}'s hand.", target, null, false);
-                            Tell($"{target.Name} stole you {card}", attacker, null, false);
+                            Tell($"You stole {card} from {attacker.Name}'s hand.", target, false, null);
+                            Tell($"{target.Name} stole you {card}", attacker, false, null);
                             TellEveryone($"{target.Name} stole a card from {attacker.Name}'s hand.", false, new[] { attacker, target });
                         }
                         break;

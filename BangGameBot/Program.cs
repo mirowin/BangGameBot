@@ -111,11 +111,16 @@ namespace BangGameBot
         public static User Me = Api.GetMeAsync().Result;
 
         public static Task<Message> Send(string text, long chatid, IReplyMarkup replyMarkup = null, ParseMode parseMode = ParseMode.Html, int replyToMessageId = 0) {
-            return Api.SendTextMessageAsync(chatid, text, true, false, replyToMessageId, replyMarkup, parseMode);
+            return Api.SendTextMessageAsync(chatid, text, parseMode, true, false, replyToMessageId, replyMarkup);
         }
 
         public static Task<Message> Edit(string newtext, Message msg, IReplyMarkup replyMarkup = null, ParseMode parseMode = ParseMode.Html, int replyToMessageId = 0) {
             return Api.EditMessageTextAsync(msg.Chat.Id, msg.MessageId, newtext, parseMode, true, replyMarkup);
+        }
+
+        public static Task<bool> Delete(Message msg)
+        {
+            return Api.DeleteMessageAsync(msg.Chat.Id, msg.MessageId);
         }
     }
 }
