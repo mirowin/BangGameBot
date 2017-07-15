@@ -78,7 +78,7 @@ namespace BangGameBot
         }
 
         /// <summary>
-        /// Player p puts permcard on table. If a card is returned, it means the permcard was a weapon and the returned card is the discarded weapon.
+        /// Puts permcard on table in front of player. If a card is returned, it means the permcard was a weapon and the returned card is the discarded weapon.
         /// </summary>
         /// <returns>The perm card on table.</returns>
         /// <param name="p">P.</param>

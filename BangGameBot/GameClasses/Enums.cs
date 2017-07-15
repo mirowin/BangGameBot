@@ -28,7 +28,7 @@
 
     public enum GameStatus
     {
-        Joining, Running, Ending
+        Joining, PhaseZero, PhaseOne, PhaseTwo, PhaseThree
     }
 
     public enum CardType
@@ -38,7 +38,20 @@
 
     public enum ErrorMessage
     {
-        NoError, NoPlayersToStealFrom
+        NoError = 0, NoPlayersToStealFrom, UseBeer,
+        NoPlayersToPutInJail,
+        CantUseMissed,
+        OnlyOneBang,
+        AlreadyInUse,
+        EveryoneMaxLives,
+        NoCardsToDiscard,
+        MaxLives,
+        NoReachablePlayers
     }
+
+    public enum Situation
+    {
+        Standard, PlayerDying, PhaseThree
+    }  
 
 }

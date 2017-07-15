@@ -13,8 +13,8 @@ namespace BangGameBot
         public Message PlayerListMsg = null;
         public Message TurnMsg = null;
         public string QueuedMsg = "";
-        public bool HasMenuActive;
         public bool VotedToStart = false;
+        public bool UsedBang = false;
         public Choice Choice = null;
         public List<Card> Cards = new List<Card>();
         public int Lives { get; private set; }
@@ -70,8 +70,6 @@ namespace BangGameBot
             Lives += n;
             if (Lives > MaxLives)
                 Lives = MaxLives;
-            if (Lives < 0)
-                Lives = 0;
         }
     }
 }

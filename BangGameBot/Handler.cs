@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -63,7 +64,7 @@ namespace BangGameBot
         public static void HandleCallbackQuery (CallbackQuery q) {
             string errormessage = null;
             if (q.Data.StartsWith("err")) {
-                errormessage = Helpers.ErrorMessages[(ErrorMessage)int.Parse(q.Data.Substring(3))];
+                errormessage = Helpers.ErrorMessages[(ErrorMessage)Enum.Parse(typeof(ErrorMessage), q.Data.Substring(3))];
             }
             Bot.Api.AnswerCallbackQueryAsync(q.Id, errormessage, true);
             var chatid = q.Message.Chat.Id;

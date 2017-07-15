@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace BangGameBot
 {
@@ -30,7 +32,6 @@ namespace BangGameBot
         }
 
         public static int DistanceSeen(this Player source, Player target, List<Player> players) {
-            //TODO deal with dead players!
             var i = players.IndexOf(source);
             var j = players.IndexOf(target);
             //direct distance
@@ -50,6 +51,26 @@ namespace BangGameBot
             return distance < 1 ? 1 : distance;
         }
 
+        public static bool IsReachableBy(this Player source, Player target, List<Player> players)
+        {
+            int reachdistance = 1;
+            switch (source.Weapon?.Name)
+            {
+                case CardName.Schofield:
+                    reachdistance = 2;
+                    break;
+                case CardName.Remington:
+                    reachdistance = 3;
+                    break;
+                case CardName.RevCarabine:
+                    reachdistance = 4;
+                    break;
+                case CardName.Winchester:
+                    reachdistance = 5;
+                    break;
+            }
+            return source.DistanceSeen(target, players) <= reachdistance;
+        }
 
         public static string GetString<T>(this object en)
         {
@@ -159,10 +180,15 @@ namespace BangGameBot
         /// <summary>
         /// Returns a random item from the list.
         /// </summary>
-        public static T Random<T>(this List<T> list) {
+        public static T Random<T>(this IEnumerable<T> list) {
             return list.ElementAt(Program.R.Next(list.Count()));
         }
 
+        public static InlineKeyboardMarkup ToKeyboard(this IEnumerable<InlineKeyboardButton[]> buttons)
+        {
+            return new InlineKeyboardMarkup(buttons.ToArray());
+        }
+        
 
         //thanks Para! :P
         public static int ComputeLevenshtein(this string s, string t)

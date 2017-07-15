@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
@@ -12,14 +11,14 @@ namespace BangGameBot
         private void StartGame()
         {
             UpdateJoinMessages(true);
-            Status = GameStatus.Running;
-
+            Status = GameStatus.PhaseZero;
             AssignRoles();
             AssignCharacters();
             DealCards();
 
             while (true)
             {
+                Status = GameStatus.PhaseZero;
                 Turn = (Turn + 1) % Players.Count();
                 SendPlayerList();
                 if (Turn == Players.Count())
@@ -29,20 +28,25 @@ namespace BangGameBot
                 if (currentplayer.CardsOnTable.All(x => x.Name != CardName.Jail))
                 {
                     PhaseOne(currentplayer);
-                    //TODO PhaseTwo(currentplayer);
+                    PhaseTwo(currentplayer);
                     PhaseThree(currentplayer);
                     SendMessages(); //do a last send and disable menus
                 }
                 else
-                {
                     Discard(currentplayer, currentplayer.CardsOnTable.First(x => x.Name == CardName.Jail));
-                }
-                foreach (var p in Players)
-                {
-                    p.PlayerListMsg = null;
-                    p.TurnMsg = null;
-                    p.Choice = null; //just to be sure
-                }
+
+                ResetPlayers();
+            }
+        }
+
+        private void ResetPlayers()
+        {
+            foreach (var p in Players)
+            {
+                p.UsedBang = false;
+                p.PlayerListMsg = null;
+                p.TurnMsg = null;
+                p.Choice = null; //just to be sure
             }
         }
 
@@ -153,6 +157,8 @@ namespace BangGameBot
 
         private void PhaseOne(Player curplayer)
         {
+            Status = GameStatus.PhaseOne;
+
             List<Card> cardsdrawn;
             switch (curplayer.Character)
             {
@@ -192,7 +198,7 @@ namespace BangGameBot
                             if (curplayer.Character == Character.JesseJones)
                             {
                                 //steal from a player
-                                UsePanic(curplayer, true);
+                                UsePanic(curplayer);
                             }
                             else
                             {
@@ -211,8 +217,146 @@ namespace BangGameBot
             SendMessages();
         }
 
+        private void PhaseTwo(Player curplayer)
+        {
+            Status = GameStatus.PhaseTwo;
+
+            while (curplayer.CardsInHand.Count() > 0)
+            {
+                //ask them what they want to do
+                Tell("Select the card you want to use.", curplayer, true);
+                var menu = AddYesButton(MakeCardsInHandMenu(curplayer, Situation.Standard), "Discard cards »");
+                if (curplayer.Character == Character.SidKetchum)
+                {
+                    //sid ketchum can discard two cards
+                    Tell("At any time, you can use your ability to discard two cards and regain one life point.", curplayer, false);
+                    menu.Add(new[] { new InlineKeyboardButton("Use ability", $"{Id}|bool|no") });
+                }
+                SendMessages(curplayer, MakeCardsInHandMenu(curplayer, Situation.Standard).ToKeyboard());
+
+                //see what they chose
+                var choice = WaitForChoice(curplayer, 60);
+                if (choice == null) //afk
+                    return;
+                else if (choice.ChoseYes == true) //discard cards
+                    return;
+                else if (choice.ChoseYes == false)
+                {
+                    if (curplayer.Character != Character.SidKetchum)
+                        throw new Exception("Someone chose no during Phase Two...");
+                    //it was sid ketchum! he wants to discard two cards and regain one life point.
+                    Tell($"Choose the cards to discard.", curplayer, false);
+                    SendMessages(curplayer, MakeMenuFromCards(curplayer.CardsInHand).ToKeyboard());
+                    var chosencard = WaitForChoice(curplayer, 30)?.CardChosen ?? curplayer.ChooseCardFromHand();
+                    Discard(curplayer, choice.CardChosen);
+                    Tell($"You discarded {choice.CardChosen.GetDescription()}. Select another card to discard.", curplayer, false);
+                    SendMessages(curplayer, MakeMenuFromCards(curplayer.CardsInHand).ToKeyboard());
+                    var secondchosencard = WaitForChoice(curplayer, 30)?.CardChosen ?? curplayer.ChooseCardFromHand();
+                    Discard(curplayer, secondchosencard);
+                    Tell(
+                        $"You discarded {secondchosencard.GetDescription()}, and regained a life point.",
+                        curplayer, false,
+                        $"{curplayer.Name} discarded {chosencard.GetDescription()} and {secondchosencard.GetDescription()}, and regained a life point!");
+                    curplayer.AddLives(1);
+                    SendMessages();
+                    continue;
+                }
+            
+
+                //get the card
+                var cardchosen = choice.CardChosen;
+                if (cardchosen.Type == CardType.PermCard || cardchosen.Type == CardType.Weapon)
+                {
+                    if (cardchosen.Name == CardName.Jail)
+                    {
+                        var possiblechoices = Players.Where(x => x.Role != Role.Sheriff && !x.CardsOnTable.Any(c => c.Name == CardName.Jail));
+                        Tell($"Choose a player to put in jail.", curplayer, false);
+                        SendMessages(curplayer, possiblechoices.Select(x => new[] { new InlineKeyboardButton(x.Name, $"{Id}|player|{x.Id}") }).ToKeyboard());
+                        var chosenplayer = WaitForChoice(curplayer, 30)?.PlayerChosen ?? possiblechoices.Random();
+                        chosenplayer.StealFrom(curplayer, cardchosen);
+                        Dealer.PutPermCardOnTable(chosenplayer, cardchosen);
+                        Tell($"You put {chosenplayer.Name} in jail!", curplayer, false);
+                        Tell($"{curplayer.Name} put you in jail!", chosenplayer, false);
+                        TellEveryone($"{curplayer.Name} put {chosenplayer.Name} in jail!", false, new[] { chosenplayer, curplayer });
+                    }
+                    else
+                    {
+                        var discardweapon = Dealer.PutPermCardOnTable(curplayer, cardchosen);
+                        var msg = "";
+                        if (discardweapon != null)
+                            msg = $", and discarded {discardweapon.GetDescription()}";
+                        msg += ".";
+                        Tell($"You put {cardchosen.GetDescription()} in play" + msg, curplayer, false, $"{curplayer.Name} put {cardchosen.GetDescription()} in play" + msg);
+                        //TODO maybe inform players what this means.
+                    }
+                    SendMessages();
+                    continue;
+                }
+
+                Tell($"You used {cardchosen.GetDescription()}", curplayer, false, $"{curplayer.Name} used {cardchosen.GetDescription()}.");
+                Discard(curplayer, cardchosen);
+                switch (cardchosen.Name)
+                {
+                    case CardName.Bang:
+                        UseBang(curplayer);
+                        break;
+                    case CardName.Missed:
+                        if (curplayer.Character != Character.CalamityJanet)
+                            throw new Exception("Someone is using Missed! during their turn!");
+                        UseBang(curplayer);
+                        break;
+                    case CardName.Beer:
+                        if (Players.Count() == 2) {
+                            TellEveryone("Beer has no effect when only two players are left!");
+                            continue;
+                        }
+                        curplayer.AddLives(1);
+                        Tell($"You regained one life point.", curplayer, false, $"{curplayer.Name} regained one life point.");
+                        break;
+                    case CardName.CatBalou:
+                        //TODO
+                        break;
+                    case CardName.Duel:
+                        //TODO
+                        break;
+                    case CardName.Gatling:
+                        //TODO
+                        break;
+                    case CardName.GeneralStore:
+                        //TODO
+                        break;
+                    case CardName.Indians:
+                        //TODO
+                        break;
+                    case CardName.Panic:
+                        UsePanic(curplayer);
+                        break;
+                    case CardName.Saloon:
+                        foreach (var p in Players)
+                            p.AddLives(1);
+                        TellEveryone($"Everyone regained a life point.", false);
+                        break;
+                    case CardName.Stagecoach:
+                        DrawCards(curplayer, 2);
+                        break;
+                    case CardName.WellsFargo:
+                        DrawCards(curplayer, 3);
+                        break;
+                }
+                SendMessages();
+            }
+        }
+
+        private void UseBang(Player curplayer)
+        {
+            curplayer.UsedBang = true;
+            //TODO
+        }
+
         private void PhaseThree(Player curplayer)
         {
+            Status = GameStatus.PhaseThree;
+
             bool firsttime = true;
             var discarded = 0;
             while (true)
@@ -228,7 +372,10 @@ namespace BangGameBot
                     Tell(msg + "Select the cards you want to discard.", curplayer, firsttime, null);
                 }
                 //send the menu
-                SendMessages(curplayer, MakeCardsInHandMenu(curplayer, true));
+                var menu = MakeMenuFromCards(curplayer.CardsInHand);
+                if (curplayer.CardsInHand.Count() <= curplayer.Lives)
+                    AddYesButton(menu, "End of turn");
+                SendMessages(curplayer, menu.ToKeyboard());
                 var choice = WaitForChoice(curplayer, 30);
                 //yes = end of turn
                 if (choice?.ChoseYes ?? false)
@@ -245,7 +392,6 @@ namespace BangGameBot
                 firsttime = false;
                 discarded++;
 
-                //TODO: Fix sid ketchum! at ANY time he can do this.
                 //sid ketchum can regain a life by discarding two cards
                 if (curplayer.Character == Character.SidKetchum && discarded % 2 == 0 && curplayer.Lives < curplayer.MaxLives)
                 {
@@ -258,19 +404,23 @@ namespace BangGameBot
             return;
         }
 
-        private void UsePanic(Player curplayer, bool jessejonesability = false)
+        private void UsePanic(Player curplayer)
         {
+            var jessejonesability = curplayer.Character == Character.JesseJones && Status == GameStatus.PhaseOne;
+            if (!jessejonesability && Status != GameStatus.PhaseTwo)
+                throw new Exception("Someone is using Panic! outside Phase Two...");
+
             var possiblechoices = jessejonesability ? 
-                Players.Where(x => x != curplayer && x.Lives > 0 && x.CardsInHand.Count() > 0) : 
-                Players.Where(x => x.Lives > 0 && x.Cards.Count() > 0 && curplayer.DistanceSeen(x, Players) == 1);
+                Players.Where(x => x.Id != curplayer.Id && x.CardsInHand.Count() > 0) : 
+                Players.Where(x => x.Cards.Count() > 0 && curplayer.DistanceSeen(x, Players) == 1);
             Player playerchosen;
 
             if (possiblechoices.Count() > 1)
             {
                 Tell(
-                    "Choose the player to steal from.\nThe number in parenthesis is the number of cards they have in their hand.", curplayer,
-                    false
-, $"{curplayer.Name} has decided to steal their first card from a player's hand.");
+                    "Choose the player to steal from.\nThe number in parenthesis is the number of cards they have in their hand.", 
+                    curplayer, false, 
+                    $"{curplayer.Name} has decided to steal their first card from a player's hand.");
                 //make the menu and send
                 var buttonslist = new List<InlineKeyboardButton[]>();
                 foreach (var p in possiblechoices)
@@ -284,20 +434,14 @@ namespace BangGameBot
             
             //tell the player who is the target
             Tell(possiblechoices.Count() == 1 ? $"The only player you can steal from is {playerchosen.Name}." : $"You chose to steal from {playerchosen.Name}.", curplayer, false, null);
-
-            if (jessejonesability || playerchosen.CardsOnTable.Count() == 0)
-            {
-                //steal from hand
-                
-            }
+            
             Card chosencard = null;
             if (!jessejonesability && playerchosen.CardsOnTable.Count() > 0)
             {
                 //choose the card
                 Tell("Choose which card to steal.", curplayer, false, $"{curplayer.Name} chose to steal a card from {playerchosen.Name}.");
                 //make menu and send
-                var buttonslist = MakeMenuFromCards(playerchosen.CardsOnTable);
-                buttonslist.Add(new[] { new InlineKeyboardButton("Steal from hand", $"{Id}|bool|yes") });
+                var buttonslist = AddYesButton(MakeMenuFromCards(playerchosen.CardsOnTable), "Steal from hand");
                 SendMessages(curplayer, new InlineKeyboardMarkup(buttonslist.ToArray()));
 
                 //see what they chose
@@ -329,25 +473,62 @@ namespace BangGameBot
             switch (player.Character)
             {
                 case Character.JesseJones:
-                    return Players.Where(x => x.Lives > 0 && x.CardsInHand.Count() > 0).Any();
+                    if (Status != GameStatus.PhaseOne)
+                        throw new InvalidOperationException("Jesse Jones is using his ability while not in Phase One");
+                    return Players.Any(x => x.CardsInHand.Count() > 0);
                 case Character.PedroRamirez:
+                    if (Status != GameStatus.PhaseOne)
+                        throw new InvalidOperationException("Pedro Ramirez is using his ability while not in Phase One");
                     return Dealer.Graveyard.Any();
+                case Character.SidKetchum:
+                    if (player.Lives > 0)
+                        throw new InvalidOperationException("Sid Ketchum is doing his ability while living");
+                    //regainable lives = beers count + other cards / 2 (2 non-beers = 1 life)
+                    return player.CardsInHand.Count(x => x.Name == CardName.Beer) + player.CardsInHand.Count(x => x.Name != CardName.Beer) / 2 > -player.Lives;
                 default:
                     throw new NotImplementedException();
             }
         }
-        
-        private ErrorMessage CanUseCard(Player player, Card card)
+
+        private ErrorMessage CanUseCard(Player player, Card card, Situation s = Situation.Standard)
         {
-            switch (card.Name)
+            switch (s)
             {
-                case CardName.Panic:
-                    return Players.Where(x => x.Lives > 0 && x.Cards.Count() > 0 && player.DistanceSeen(x, Players) == 1).Any() ? ErrorMessage.NoError : ErrorMessage.NoPlayersToStealFrom;
+                case Situation.PlayerDying:
+                    if (card.Name == CardName.Beer)
+                        return ErrorMessage.NoError;
+                    else
+                        return ErrorMessage.UseBeer;
+                
+                //normal situation
+                case Situation.Standard:
                 default:
-                    throw new NotImplementedException();
+                    switch (card.Name)
+                    {
+                        case CardName.Bang:
+                            return (!player.UsedBang || player.Weapon.Name == CardName.Volcanic || player.Character == Character.WillyTheKid) ? (Players.Any(x => x.IsReachableBy(player, Players)) ? ErrorMessage.NoError : ErrorMessage.NoReachablePlayers) : ErrorMessage.OnlyOneBang;
+                        case CardName.Missed:
+                            return player.Character == Character.CalamityJanet ? ErrorMessage.NoError : ErrorMessage.CantUseMissed;
+                        case CardName.Jail:
+                            return Players.Any(x => x.Role != Role.Sheriff && !x.CardsOnTable.Any(c => c.Name == CardName.Jail)) ? ErrorMessage.NoError : ErrorMessage.NoPlayersToPutInJail;
+                        case CardName.Panic:
+                            return Players.Any(x => x.Cards.Count() > 0 && player.DistanceSeen(x, Players) == 1) ? ErrorMessage.NoError : ErrorMessage.NoPlayersToStealFrom;
+                        case CardName.Beer:
+                            return player.Lives == player.MaxLives ? ErrorMessage.MaxLives : ErrorMessage.NoError;
+                        case CardName.CatBalou:
+                            return Players.Any(x => x.Cards.Count() > 0) ? ErrorMessage.NoError : ErrorMessage.NoCardsToDiscard;
+                        case CardName.Saloon:
+                            return Players.All(x => x.Lives == x.MaxLives) ? ErrorMessage.EveryoneMaxLives : ErrorMessage.NoError;
+                        case CardName.Barrel:
+                        case CardName.Scope:
+                        case CardName.Mustang:
+                            return player.CardsOnTable.Any(x => x.Name == card.Name) ? ErrorMessage.AlreadyInUse : ErrorMessage.NoError;
+                        default:
+                            return ErrorMessage.NoError;
+                    }
             }
         }
-        
+
         private List<Card> DrawCards(Player p, int n)
         {
             var result = Dealer.DrawCards(n, p);
@@ -412,7 +593,7 @@ namespace BangGameBot
         private Card Discard(Player p, Card c)
         {
             var result = Dealer.Discard(p, c);
-            if (p.Character == Character.SuzyLafayette && p.Lives > 0 && p.CardsInHand.Count() == 0)
+            if (p.Character == Character.SuzyLafayette && p.CardsInHand.Count() == 0)
             {
                 DrawCards(p, 1);
             }
@@ -422,33 +603,10 @@ namespace BangGameBot
         private void HitPlayer(Player target, int lives, Player attacker = null)
         {
             target.AddLives(-lives);
-            Tell($"You lose {lives} lives.", target, true, textforothers: $"{target.Name} loses {lives} lives.");
-            //TODO Deal with beers here!!
-            if (target.Lives == 0)
-            {
-                Tell($"You're out of lives! You died.", target, true, $"{target.Name} died! {target.Name} was {target.Role.GetString<Role>()}");
-                Players.Remove(target);
-                DeadPlayers.Add(target);
+            Tell($"You lose {lives} lives.", target, true, $"{target.Name} loses {lives} lives.\n");
 
-                var vulturesam = Players.FirstOrDefault(x => x.Character == Character.VultureSam);
-                if (vulturesam != null)
-                {
-                    foreach (var c in target.Cards)
-                        vulturesam.StealFrom(target, c);
-                    Tell($"You take in hand all {target.Name}'s cards.", vulturesam, false, $"{vulturesam.Name} takes in hand all {target.Name}'s cards.");
-                }
-                else
-                {
-                    if (attacker != null && target.Role == Role.Outlaw)
-                    {
-                        Tell("You draw three cards as a reward.", attacker, false, $"{attacker.Name} draws three cards as a reward.");
-                        DrawCards(attacker, 3);
-                    }
-                    TellEveryone($"{target.Name} discards all the cards: " + string.Join(", ", target.Cards.Select(x => x.GetDescription())));
-                    foreach (var c in target.Cards)
-                        Discard(target, c);
-                }
-            }
+            if (target.Lives <= 0 && LethalHit(target))
+                PlayerDies(target);
             else
             {
                 switch (target.Character)
@@ -472,7 +630,84 @@ namespace BangGameBot
             SendMessages();
             return;
         }
-        
-    }
 
+        private bool LethalHit(Player target)
+        {
+            if (target.Lives > 0)
+                throw new ArgumentException("Player is not lethally hit.");
+            //check if they can be saved
+            while ((target.CardsInHand.Count(x => x.Name == CardName.Beer) > -target.Lives) || //they have enough beers
+                (target.Character == Character.SidKetchum && CanUseAbility(target))) //they are sid ketchum and have enough cards / beers.
+            {
+                List<InlineKeyboardButton[]> menu = null;
+                if (target.Character == Character.SidKetchum)
+                {
+                    Tell($"You are dying! You have {target.Lives} life points. You can still use a beer, or use your ability (discard two cards), to regain a life point.\nChoose the card to use or discard.", target, false);
+                    menu = MakeMenuFromCards(target.CardsInHand);
+                }
+                else
+                {
+                    Tell($"You are dying! You have {target.Lives} life points. You can still use a beer to regain a life point.\nSelect the beer.", target, false);
+                    menu = MakeCardsInHandMenu(target, Situation.PlayerDying);
+                }
+                AddYesButton(menu, "Resign");
+                SendMessages(target, menu.ToKeyboard());
+                var choice = WaitForChoice(target, 30);
+                if (choice == null || choice.ChoseYes == true)
+                    break;
+                else if (choice.CardChosen.Name == CardName.Beer)
+                {
+                    target.AddLives(1);
+                    Tell("You used a Beer, and regained one life point.", target, false, $"{target.Name} used a Beer, and regained one life point!");
+                }
+                else if (target.Character == Character.SidKetchum)
+                //this should ALWAYS be sid ketchum...
+                {
+                    Discard(target, choice.CardChosen);
+                    Tell($"You discarded {choice.CardChosen.GetDescription()}. Select another card to discard.", target, false);
+                    menu = AddYesButton(MakeMenuFromCards(target.CardsInHand), "Resign");
+                    var secondchoice = WaitForChoice(target, 30);
+                    if (secondchoice == null || secondchoice.ChoseYes == true)
+                        break;
+                    else
+                    {
+                        Discard(target, secondchoice.CardChosen);
+                        Tell(
+                            $"You discarded {secondchoice.CardChosen.GetDescription()}, and regained a life point.",
+                            target, false,
+                            $"{target.Name} discarded {choice.CardChosen.GetDescription()} and {secondchoice.CardChosen.GetDescription()}, and regained a life point!");
+                        target.AddLives(1);
+                    }
+                }
+                else
+                    throw new IndexOutOfRangeException("Something not being taken in account...");
+            }
+            SendMessages();
+            return target.Lives <= 0;
+        }
+        
+        private void PlayerDies(Player target)
+        {
+            Tell($"You're out of lives! You died.", target, true, $"{target.Name} died! {target.Name} was {target.Role.GetString<Role>()}");
+            Players.Remove(target);
+            DeadPlayers.Add(target);
+
+            var vulturesam = Players.FirstOrDefault(x => x.Character == Character.VultureSam);
+            if (vulturesam != null)
+            {
+                foreach (var c in target.Cards)
+                    vulturesam.StealFrom(target, c);
+                Tell($"You take in hand all {target.Name}'s cards.", vulturesam, false, $"{vulturesam.Name} takes in hand all {target.Name}'s cards.");
+            }
+            else
+            {
+                TellEveryone($"{target.Name} discards all the cards: " + string.Join(", ", target.Cards.Select(x => x.GetDescription())));
+                foreach (var c in target.Cards)
+                    Discard(target, c);
+            }
+            SendMessages();
+            return;
+        }
+
+    }
 }

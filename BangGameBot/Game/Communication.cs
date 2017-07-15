@@ -17,19 +17,15 @@ namespace BangGameBot
             return new InlineKeyboardMarkup(buttons.ToArray());
         }
 
-        private InlineKeyboardMarkup MakeCardsInHandMenu(Player p, bool phasethree = false)
+        private List<InlineKeyboardButton[]> MakeCardsInHandMenu(Player p, Situation s)
         {
             var buttons = new List<InlineKeyboardButton[]>();
             foreach (var c in p.CardsInHand)
             {
-                var err = phasethree ? ErrorMessage.NoError : CanUseCard(p, c);
-                buttons.Add(new InlineKeyboardButton(c.GetDescription(), err == ErrorMessage.NoError ? $"{Id}|card|{c.Encode()}" : ("err" + (int)err)).ToSinglet());
+                var err = (int)CanUseCard(p, c, s);
+                buttons.Add(new InlineKeyboardButton(c.GetDescription(), err == 0 ? $"{Id}|card|{c.Encode()}" : ("err" + err)).ToSinglet());
             }
-            if (phasethree && p.CardsInHand.Count() <= p.Lives)
-            {
-                buttons.Add(new InlineKeyboardButton("End of turn", $"{Id}|bool|yes").ToSinglet());
-            }
-            return new InlineKeyboardMarkup(buttons.ToArray());
+            return buttons;
         }
 
         private List<InlineKeyboardButton[]> MakeMenuFromCards(List<Card> list)
@@ -37,6 +33,12 @@ namespace BangGameBot
             var buttons = new List<InlineKeyboardButton[]>();
             foreach (var c in list)
                 buttons.Add(new InlineKeyboardButton(c.GetDescription(), $"{Id}|card|{c.Encode()}").ToSinglet());
+            return buttons;
+        }
+
+        public List<InlineKeyboardButton[]> AddYesButton(List<InlineKeyboardButton[]> buttons, string str)
+        {
+            buttons.Add(new[] { new InlineKeyboardButton(str, $"{Id}|bool|yes") });
             return buttons;
         }
 
@@ -94,10 +96,10 @@ namespace BangGameBot
             menurecipients = menurecipients ?? Players.ToArray();
             foreach (var p in Players)
             {
-                if (p.TurnMsg == null)
-                    p.TurnMsg = Bot.Send(p.QueuedMsg, p.Id, (menurecipients.Contains(p) ? (menu ?? null) : null)).Result;
+                if (p.TurnMsg == null || (p.TurnMsg.Text + p.QueuedMsg).Length > 4000)
+                    p.TurnMsg = Bot.Send(p.QueuedMsg, p.Id, (menurecipients.Contains(p) ? menu : null)).Result;
                 else
-                    p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, (menurecipients.Contains(p) ? (menu ?? null) : null)).Result;
+                    p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, (menurecipients.Contains(p) ? menu : null)).Result;
                 p.QueuedMsg = "";
             }
             return;
@@ -108,6 +110,8 @@ namespace BangGameBot
             SendMessages(menurecipient.ToSinglet(), menu);
             return;
         }
+
+        
         
         private Choice WaitForChoice(Player p, int maxseconds)
         {

@@ -6,15 +6,24 @@ namespace BangGameBot
     static class Helpers
     {
         public static readonly Dictionary<ErrorMessage, string> ErrorMessages = new Dictionary<ErrorMessage, string>() {
-            {ErrorMessage.NoPlayersToStealFrom, "There are no players to steal from!"}
+            {ErrorMessage.NoPlayersToStealFrom, "There are no players to steal from!"},
+            {ErrorMessage.UseBeer, "You have to use a Beer!"},
+            {ErrorMessage.NoPlayersToPutInJail, "You can't put the Sheriff in Jail!" },
+            {ErrorMessage.CantUseMissed, "You can't use a Missed! card during your turn!" },
+            {ErrorMessage.OnlyOneBang, "You can use only one Bang! card per turn!" },
+            {ErrorMessage.AlreadyInUse, "You already have another copy of this card in play!" },
+            {ErrorMessage.EveryoneMaxLives, "All the players have the maximum number of life points!" },
+            {ErrorMessage.NoCardsToDiscard, "There are no cards to discard from any player!" },
+            {ErrorMessage.MaxLives, "You already have the maximum possible life points!" },
+            {ErrorMessage.NoReachablePlayers, "You can't reach any player with your weapon!" }
         };
 
         public static readonly List<InlineQueryResultCachedPhoto> Cards = new List<InlineQueryResultCachedPhoto>() {
             //normal cards
-            MakeInlineResult("AgADBAADqKkxGw_eSVN7g-gAAT0LfR7747wZAATVefIawihEpUw5AwABAg", "Bang!", "Remove one life point from a player at reachable distance.\nNote: You can play only one Bang! card per turn, unless you have a Volcanic in play."),
+            MakeInlineResult("AgADBAADqKkxGw_eSVN7g-gAAT0LfR7747wZAATVefIawihEpUw5AwABAg", "Bang!", "Remove one life point from a player at reachable distance.\nNote: You can play only one Bang! card per turn (unless you have a Volcanic in play)."),
             MakeInlineResult("AgADBAADq6kxGw_eSVOQAxG7emk3FsOGpxkABFv2slmuEVuErbQDAAEC", "Beer", "Regain one life point. You can use this card also out of turn, only if you have just received a hit that is lethal.\nNote: You cannot gain more life points than your starting amount."),
             MakeInlineResult("AgADBAADr6kxGw_eSVPJWSHq0QHkziw_qRkABBH0Qj1tfBrnsbgDAAEC", "Cat Balou", "With this card, you make any player discard a card of your choice."),
-            MakeInlineResult("AgADBAADsqkxGw_eSVO6pJbke38JvKJkuxkABLzwUc2A_AVwlj0DAAEC", "Duel", "Challenge any other player. Each of you two, in turns, may discard a Bang! card. The one of you that can't, or doesn't want to, loses a life point."),
+            MakeInlineResult("AgADBAADsqkxGw_eSVO6pJbke38JvKJkuxkABLzwUc2A_AVwlj0DAAEC", "Duel", "Challenge any other player. Each of you two, in turns, may discard a Bang! card. The one of you that can't (or doesn't want to) loses a life point."),
             MakeInlineResult("AgADBAADtqkxGw_eSVNU6vaFKoioPvpmqRkABEVbDdSQTUIB0bUDAAEC", "Gatling", "Shoot a Bang! to all the other players.\nNote: it is NOT considered as a Bang! card."),
             MakeInlineResult("AgADBAADtKkxGw_eSVMxPqzNZET-CDO-mxkABLRT08CeUKO5_RsEAAEC", "General Store", "Reveal as many cards from the deck face up as the players. Starting with you, each player chooses one of those cards and takes it in hand."),
             MakeInlineResult("AgADBAADt6kxGw_eSVPAT_AIi-LzPJvHvBkABAf1HtmQA0yW2ToDAAEC", "Indians!", "Each player, excluding you, may discard a Bang! card, or lose one life point.\nNote: Missed! and Barrel have no effect in this case."),
