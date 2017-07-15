@@ -1,27 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InlineQueryResults;
-using Telegram.Bot.Types.ReplyMarkups;
 
 namespace BangGameBot
 {
     public static class Handler
     {
-
         public static List<Game> Games = new List<Game>();
-        public static readonly Dictionary<ErrorMessage,string> ErrorMessages = new Dictionary<ErrorMessage, string>() {
-            {ErrorMessage.NoPlayersToStealFrom, "There are no players to steal from!"}  
-        };
-
-        public static readonly List<InlineQueryResultCachedPhoto> Cards = new List<InlineQueryResultCachedPhoto>() {
-            MakeInlineResult("AgADBAAD6To4G30XZAfv-OF0KgoTqaalmxkABHLrrQghFmflTZQBAAEC", "Cat Balou", "With this card you can discard a card from any player"),
-            MakeInlineResult("AgADBAADXD04G7MXZAc-QahBMTE2oYxsuxkABCZDQqYPkkLsFu4CAAEC", "El Gringo", "Each time he is hit by a player, he draws a card from the hand of that player")
-        };
-
+        
         public static void HandleMessage (Message msg) {
             var chatid = msg.Chat.Id;
             var userid = msg.From.Id;
@@ -75,7 +63,7 @@ namespace BangGameBot
         public static void HandleCallbackQuery (CallbackQuery q) {
             string errormessage = null;
             if (q.Data.StartsWith("err")) {
-                errormessage = ErrorMessages[(ErrorMessage)int.Parse(q.Data.Substring(3))];
+                errormessage = Helpers.ErrorMessages[(ErrorMessage)int.Parse(q.Data.Substring(3))];
             }
             Bot.Api.AnswerCallbackQueryAsync(q.Id, errormessage, true);
             var chatid = q.Message.Chat.Id;
@@ -101,19 +89,9 @@ namespace BangGameBot
         }
 
         public static void HandleInlineQuery (InlineQuery q) {
-            Bot.Api.AnswerInlineQueryAsync(q.Id, Cards.Where(x => x.Title.ToLower().Contains(q.Query.ToLower()) || x.Title.ToLower().ComputeLevenshtein(q.Query.ToLower()) < 3).ToArray());
+            Bot.Api.AnswerInlineQueryAsync(q.Id, Helpers.Cards.Where(x => x.Title.ToLower().Contains(q.Query.ToLower()) || x.Title.ToLower().ComputeLevenshtein(q.Query.ToLower()) < 3).ToArray());
             return;
         }
-
-        private static InlineQueryResultCachedPhoto MakeInlineResult(string photoid, string name, string description) {
-            return new InlineQueryResultCachedPhoto() {
-                Id = name,
-                Title = name,
-                FileId = photoid,
-                Description = description, //hoping someone will see it XD
-                Caption = description
-            };
-        }
-
+        
     }
 }

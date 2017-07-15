@@ -157,13 +157,13 @@ namespace BangGameBot
             switch (curplayer.Character)
             {
                 case Character.KitCarlson:
-                    Tell("You are Kit Carlson. You draw 3 cards from the deck, then choose one to discard.", curplayer);
+                    Tell("You are Kit Carlson. You draw 3 cards from the deck, then choose one to put back at the top of the deck.", curplayer);
                     cardsdrawn = DrawCards(curplayer, 3);
-                    Tell("Choose the card to discard", curplayer, null, false);
+                    Tell("Choose the card to put back into the deck.", curplayer, null, false);
                     SendMessages(curplayer, new InlineKeyboardMarkup(MakeMenuFromCards(cardsdrawn).ToArray()));
-                    var cardchosen = WaitForChoice(curplayer, 30)?.CardChosen ?? DefaultChoice.ChooseCard;
-                    var carddesc = Discard(curplayer, cardchosen).GetDescription();
-                    Tell($"You discarded {carddesc}", curplayer, $"{curplayer.Name} discarded {carddesc}", false);
+                    var cardchosen = (WaitForChoice(curplayer, 30)?.CardChosen ?? DefaultChoice.ChooseCardFrom(cardsdrawn));
+                    Dealer.PutIntoDeck(curplayer, cardchosen);
+                    Tell($"You put {cardchosen.GetDescription()} back at the top of the deck.", curplayer, $"{curplayer.Name} put a card back at the top the deck", false);
                     break;
                 case Character.BlackJack:
                     Tell("You are Black Jack. You show the second card you draw; on Hearts or Diamonds, you draw one more card.", curplayer);
@@ -417,11 +417,12 @@ namespace BangGameBot
             }
             return result;
         }
-
+        
         private void HitPlayer(Player target, int lives, Player attacker = null)
         {
             target.AddLives(-lives);
             Tell($"You lose {lives} lives.", target, $"{target.Name} loses {lives} lives.");
+            //TODO Deal with beers here!!
             if (target.Lives == 0)
             {
                 Tell($"You're out of lives! You died.", target, $"{target.Name} died! {target.Name} was {target.Role.GetString<Role>()}", true);

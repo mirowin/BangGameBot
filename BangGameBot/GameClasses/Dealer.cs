@@ -62,8 +62,19 @@ namespace BangGameBot
             if (c == null)
                 c = p.ChooseCardFromHand();
             p.Cards.Remove(c);
+            c.IsOnTable = false;
             SendToGraveyard(c);
             return c;
+        }
+
+        public void PutIntoDeck(Player p, Card c)
+        {
+            if (p.Character != Character.KitCarlson)
+                throw new ArgumentException("Someone is putting a card into the deck!");
+            p.Cards.Remove(c);
+            c.IsOnTable = false;
+            Deck.Insert(0, c);
+            return;
         }
 
         /// <summary>
