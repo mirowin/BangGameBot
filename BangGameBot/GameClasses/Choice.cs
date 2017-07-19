@@ -22,7 +22,7 @@ namespace BangGameBot
 
     public static class DefaultChoice {
         public static readonly bool UseAbilityPhaseOne = false;
-        public static Player ChoosePlayer(List<Player> players) {
+        public static Player ChoosePlayer(IEnumerable<Player> players) {
             return players.Random();
         }
         public static readonly Card ChooseCard = null;
@@ -31,6 +31,7 @@ namespace BangGameBot
         }
         public static readonly bool DiscardCard = false;
         public static readonly bool UseAblityPhaseThree = false;
+        public static readonly bool UseBarrel = false;
     }
 }
 

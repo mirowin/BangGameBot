@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace BangGameBot
 {
@@ -12,6 +13,8 @@ namespace BangGameBot
         public User TelegramUser { get; }
         public Message PlayerListMsg = null;
         public Message TurnMsg = null;
+        public string CurrentMsg = "";
+        public IReplyMarkup CurrentMenu = null;
         public string QueuedMsg = "";
         public bool VotedToStart = false;
         public bool UsedBang = false;

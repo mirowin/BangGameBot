@@ -46,12 +46,15 @@
         EveryoneMaxLives,
         NoCardsToDiscard,
         MaxLives,
-        NoReachablePlayers
+        NoReachablePlayers,
+        BeerFinalDuel,
+        UseMissed
     }
 
     public enum Situation
     {
-        Standard, PlayerDying, PhaseThree
+        Standard, PlayerDying, PhaseThree,
+        PlayerShot
     }  
 
 }

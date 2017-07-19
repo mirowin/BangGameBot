@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
@@ -44,24 +45,37 @@ namespace BangGameBot
 
         private void SendPlayerList(Player p = null)
         {
-            //TODO improve UI, add menu (to delete at end of turn!)
             if (p == null)
             {
-                Players.ForEach(pl => SendPlayerList(pl));
+                Players.ForEach(pl => {
+                    Bot.Delete(pl.PlayerListMsg);
+                    SendPlayerList(pl);
+                });
                 return;
             }
             var text = "Players".ToBold() + ":\n";
             text += Players.Aggregate("", (s, pl) =>
                 s +
-            (p != pl ? p.DistanceSeen(pl, Players).ToEmoji() : "") +
-            pl.Name + " - " + pl.Character.GetString<Character>() +
-            (pl.Role == Role.Sheriff ? SheriffIndicator : "") +
-            pl.LivesString() +
-            (Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
+                p.DistanceSeen(pl, Players).ToEmoji() +
+                pl.Name + " - " + pl.Character.GetString<Character>() +
+                (pl.Role == Role.Sheriff ? SheriffIndicator : "") +
+                pl.LivesString() +
+                (Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
             );
-            p.PlayerListMsg = Bot.Send(text, p.Id).Result;
+            var menu = GetPlayerMenu(p);
+            p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
         }
 
+        private InlineKeyboardMarkup GetPlayerMenu(Player p)
+        {
+            var result = new List<InlineKeyboardButton[]>();
+            result.AddRange(Players.Select(x => new[] { new InlineKeyboardButton(x.Name, $"{Id}|playerinfo|{x.Id}") }));
+            result.Add(new[] {
+                new InlineKeyboardButton("Your cards", $"{Id}|playerinfo|{p.Id}"),
+                InlineKeyboardButton.WithSwitchInlineQueryCurrentChat("Help")
+            });
+            return result.ToKeyboard();
+        }
 
         public void SendMessage(User u, string text)
         {
@@ -78,9 +92,9 @@ namespace BangGameBot
                 textforp = "\n" + textforp;
                 textforothers = "\n" + textforothers;
             }
-            p.QueuedMsg += textforp + "\n";
+            p.QueuedMsg = p.QueuedMsg.TrimEnd('\n') + textforp + "\n";
             foreach (var pl in Players.Where(x => x.Id != p.Id))
-                pl.QueuedMsg += textforothers + "\n";
+                pl.QueuedMsg = pl.QueuedMsg.TrimEnd('\n') + textforothers + "\n";
             return;
         }
 
@@ -96,11 +110,19 @@ namespace BangGameBot
             menurecipients = menurecipients ?? Players.ToArray();
             foreach (var p in Players)
             {
-                if (p.TurnMsg == null || (p.TurnMsg.Text + p.QueuedMsg).Length > 4000)
+                if (!String.IsNullOrWhiteSpace(p.QueuedMsg) && (p.TurnMsg == null || (p.TurnMsg.Text + p.QueuedMsg).Length > 4000))
                     p.TurnMsg = Bot.Send(p.QueuedMsg, p.Id, (menurecipients.Contains(p) ? menu : null)).Result;
-                else
-                    p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, (menurecipients.Contains(p) ? menu : null)).Result;
-                p.QueuedMsg = "";
+                else if (p.TurnMsg != null)
+                {
+                    if (!String.IsNullOrWhiteSpace(p.QueuedMsg))
+                        p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, (menurecipients.Contains(p) ? menu : null)).Result;
+                    else if (menu != p.CurrentMenu)
+                    {
+                        Bot.EditMenu(menu, p.TurnMsg);
+                        p.CurrentMenu = menu;
+                    }
+                }
+                p.QueuedMsg = "\n";
             }
             return;
         }
@@ -111,10 +133,25 @@ namespace BangGameBot
             return;
         }
 
-        
+        public void SendPlayerInfo(CallbackQuery q, Player choice, Player recipient)
+        {
+            var text = "";
+            text = choice.Name + "\n" +
+                choice.Character.GetString<Character>() + (choice.Role == Role.Sheriff ? " - SHERIFF" : "") + "\n" +
+                choice.LivesString() + "\n\n" +
+                "Cards in hand: " + (choice.Id == recipient.Id ? 
+                    recipient.CardsOnTable.Aggregate("\n", (s, c) => s + "- " + c.GetDescription() + "\n") :
+                    choice.CardsInHand.Count().ToString()
+                ) +
+                "Cards on table: \n" + choice.CardsOnTable.Aggregate("", (s, c) => s + "- " + c.GetDescription() + "\n");
+            Bot.SendAlert(q, text);
+        }
         
         private Choice WaitForChoice(Player p, int maxseconds)
         {
+#if DEBUG
+            maxseconds = int.MaxValue;
+#endif
             p.Choice = null;
             var timer = 0;
             while (p.Choice == null && timer < maxseconds)
@@ -140,6 +177,8 @@ namespace BangGameBot
                 case "card":
                     p.Choice = new Choice(choice.GetCard(Dealer, Players));
                     break;
+                case "playerinfo":
+                    
                 default:
                     throw new ArgumentOutOfRangeException();
             }

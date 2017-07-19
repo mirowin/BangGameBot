@@ -10,21 +10,16 @@ namespace BangGameBot
         public readonly int MinPlayers = 2;
         public readonly int MaxPlayers = 7;
         public readonly string SheriffIndicator = "S";
-        public int Id = 0;
+        public int Id { get; } = 0;
         public GameStatus Status = GameStatus.Joining;
         public List<Player> Players = new List<Player>();
         public List<Player> DeadPlayers = new List<Player>();
         private Dealer Dealer = new Dealer();
         private int Turn = -1;
+        private static int NextId = 0;
 
         public Game (Message msg) {
-            var i = 1;
-            do {
-                if (Handler.Games.Any(x => x.Id == i))
-                    i++;
-                else
-                    Id = i;
-            } while (Id == 0);
+            Id = NextId++;
             
             AddPlayer(msg.From);
         }

@@ -32,6 +32,7 @@ namespace BangGameBot
         }
 
         public static int DistanceSeen(this Player source, Player target, List<Player> players) {
+            if (source.Id == target.Id) return 0;
             var i = players.IndexOf(source);
             var j = players.IndexOf(target);
             //direct distance
@@ -51,8 +52,10 @@ namespace BangGameBot
             return distance < 1 ? 1 : distance;
         }
 
-        public static bool IsReachableBy(this Player source, Player target, List<Player> players)
+        public static bool IsReachableBy(this Player target, Player source, List<Player> players)
         {
+            if (target.Id == source.Id)
+                return false;
             int reachdistance = 1;
             switch (source.Weapon?.Name)
             {
@@ -105,8 +108,8 @@ namespace BangGameBot
 
         public static string ToEmoji(this int i)
         {
-            var emojis = new [] { "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟" };
-            return emojis[i-1];
+            var emojis = new [] { "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟" };
+            return emojis[i];
         }
 
         public static string ToEmoji(this CardSuit s)
@@ -159,18 +162,12 @@ namespace BangGameBot
         }
 
         public static string Encode(this Card c) {
-            return ((int)c.Name).ToString() + "," + c.Number + "," + ((int)c.Suit).ToString() + "," + (c.IsOnTable ? "1" : "0");
+            return c.Id.ToString();
         }
 
-        public static Card GetCard(this string str, Dealer d, List<Player> p) {
-            var ints = str.Split(',');
-            //parse the card
-            var name = (CardName)int.Parse(ints[0]);
-            var number = int.Parse(ints[1]);
-            var suit = (CardSuit)int.Parse(ints[2]);
-            var isontable = ints[3] == "1";
-            //now find where this card is
-            return d.Deck.Union(p.SelectMany(x => x.Cards)).FirstOrDefault(x => x.Name == name && x.Number == number && x.Suit == suit && x.IsOnTable == isontable);
+        public static Card GetCard(this string str, Dealer d, List<Player> p)
+        {
+            return d.Deck.Union(p.SelectMany(x => x.Cards)).FirstOrDefault(x => x.Id == int.Parse(str));
         }
 
         public static T[] ToSinglet<T>(this T obj) {
@@ -227,6 +224,20 @@ namespace BangGameBot
             return d[n, m];
         }
 
+
+        public static bool IsHTMLEqualTo(this string html, string text)
+        {
+            return text == html.Replace("<b>", "")
+                .Replace("<i>", "")
+                .Replace("<code>", "")
+                .Replace("</b>", "")
+                .Replace("</i>", "")
+                .Replace("</code>", "")
+                .Replace("&amp;", "&")
+                .Replace("&lt;", "<")
+                .Replace("&gt;", ">")
+                .Replace("&quot;", "\"");
+        }
     }
 }
 

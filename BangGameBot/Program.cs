@@ -12,7 +12,7 @@ namespace BangGameBot
 	static class Program
 	{
         public static readonly Random R = new Random();
-        public static readonly string TokenPath = "token.txt";
+        public static readonly string TokenPath = @"D:\Git\BangGameBot\BangGameBot\bin\Debug\token.txt";
         public static readonly string LogPath = "errors.log";
         public static readonly long renyhp = 133748469;
         public static readonly DateTime StartTime = DateTime.UtcNow;
@@ -24,26 +24,20 @@ namespace BangGameBot
             Bot.Api.OnReceiveError += Bot_Api_OnReceiveError;
             Bot.Api.OnReceiveGeneralError += Bot_Api_OnReceiveGeneralError;
             Bot.Api.OnInlineQuery += Bot_OnInlineQuery;
-            Bot.Api.StartReceiving();
+            Bot.StartReceiving();
             Thread.Sleep(-1);
         }
 
         static void Bot_OnInlineQuery (object sender, Telegram.Bot.Args.InlineQueryEventArgs e)
         {
-            new Task (() => {
-                try {
-                    Handler.HandleInlineQuery (e.InlineQuery);
-                } catch (Exception ex) {
-                    LogError (ex);
-                }
-            }).Start ();
+            new Task(() => { Handler.HandleInlineQuery(e.InlineQuery); }).Start();
             return;
         }
 
         static void Bot_Api_OnReceiveGeneralError (object sender, Telegram.Bot.Args.ReceiveGeneralErrorEventArgs e)
         {
             if (!Bot.Api.IsReceiving)
-                Bot.Api.StartReceiving();
+                Bot.StartReceiving();
             LogError(e.Exception);
             return;
         }
@@ -51,7 +45,7 @@ namespace BangGameBot
         static void Bot_Api_OnReceiveError (object sender, Telegram.Bot.Args.ReceiveErrorEventArgs e)
         {
             if (!Bot.Api.IsReceiving)
-                Bot.Api.StartReceiving();
+                Bot.StartReceiving();
             LogError(e.ApiRequestException);
             return;
         }
@@ -62,13 +56,7 @@ namespace BangGameBot
                 Bot.Edit("This message has expired.", e.CallbackQuery.Message);
                 return;
             }
-            new Task (() => {
-                try {
-                    Handler.HandleCallbackQuery (e.CallbackQuery);
-                } catch (Exception ex) {
-                    LogError (ex);
-                }
-            }).Start ();
+            new Task(() => { Handler.HandleCallbackQuery(e.CallbackQuery); }).Start();
             return;
         }
 
@@ -76,13 +64,7 @@ namespace BangGameBot
         {
             if (e.Message?.Date == null || e.Message.Date < Program.StartTime.AddSeconds (-5))
                 return;
-            new Task (() => {
-                try {
-                    Handler.HandleMessage (e.Message);
-                } catch (Exception ex) {
-                    LogError (ex);
-                }
-            }).Start ();
+            new Task(() => { Handler.HandleMessage(e.Message); }).Start();
             return;
         }
 
@@ -107,8 +89,14 @@ namespace BangGameBot
 
 
     static class Bot {
-        public static TelegramBotClient Api = new TelegramBotClient(System.IO.File.ReadAllText(Program.TokenPath));
+        public static TelegramBotClient Api = new TelegramBotClient("428831964:AAFWsNWVcEu9nbM1_tvfoU-8xpryuZnMMwE");
         public static User Me = Api.GetMeAsync().Result;
+
+        public static void StartReceiving()
+        {
+            Api.Timeout = TimeSpan.FromMilliseconds(100);
+            Api.StartReceiving();
+        }
 
         public static Task<Message> Send(string text, long chatid, IReplyMarkup replyMarkup = null, ParseMode parseMode = ParseMode.Html, int replyToMessageId = 0) {
             return Api.SendTextMessageAsync(chatid, text, parseMode, true, false, replyToMessageId, replyMarkup);
@@ -118,9 +106,19 @@ namespace BangGameBot
             return Api.EditMessageTextAsync(msg.Chat.Id, msg.MessageId, newtext, parseMode, true, replyMarkup);
         }
 
+        public static Task<Message> EditMenu(IReplyMarkup replyMarkup, Message msg)
+        {
+            return Api.EditMessageReplyMarkupAsync(msg.Chat.Id, msg.MessageId, replyMarkup);
+        }
+
         public static Task<bool> Delete(Message msg)
         {
             return Api.DeleteMessageAsync(msg.Chat.Id, msg.MessageId);
+        }
+
+        public static Task<bool> SendAlert(CallbackQuery query, string text = null)
+        {
+            return Api.AnswerCallbackQueryAsync(query.Id, text, true);
         }
     }
 }
