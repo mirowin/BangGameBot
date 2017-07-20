@@ -28,7 +28,8 @@
 
     public enum GameStatus
     {
-        Joining, PhaseZero, PhaseOne, PhaseTwo, PhaseThree
+        Joining, PhaseZero, PhaseOne, PhaseTwo, PhaseThree,
+        Ending
     }
 
     public enum CardType
@@ -48,13 +49,15 @@
         MaxLives,
         NoReachablePlayers,
         BeerFinalDuel,
-        UseMissed
+        UseMissed,
+        UseBang
     }
 
     public enum Situation
     {
         Standard, PlayerDying, PhaseThree,
-        PlayerShot
+        PlayerShot,
+        DiscardBang
     }  
 
 }

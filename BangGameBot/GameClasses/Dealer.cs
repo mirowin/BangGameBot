@@ -5,9 +5,10 @@ using System.Linq;
 namespace BangGameBot
 {
     public class Dealer
-    {
+    {   
         public List<Card> Deck { get; private set; } = new List<Card>();
         public List<Card> Graveyard { get; private set; } = new List<Card>();
+        public List<Card> PeekedCards { get; private set; } = new List<Card>();
         public Dealer()
         {
             MakeNewDeck();
@@ -77,6 +78,36 @@ namespace BangGameBot
             return;
         }
 
+        /// <summary>
+        /// Take the first n cards from the deck, put them in PeekedCards, reshuffling if needed
+        /// </summary>
+        public Tuple<List<Card>,bool> PeekCards(int n)
+        {
+            var list = new List<Card>();
+            bool reshuffled = false;
+            for (var i = 0; i < n; i++)
+            {
+                var tuple = RemoveCard();
+                reshuffled = tuple.Item2;
+                list.Add(tuple.Item1);
+            }
+            PeekedCards = list;
+            return new Tuple<List<Card>, bool>(list, reshuffled);
+        }
+
+        /// <summary>
+        /// Player p draws card c from the previously peeked cards.
+        /// </summary>
+        /// <returns></returns>
+        public void DrawFromPeeked(Player p, Card c)
+        {
+            if (!PeekedCards.Remove(c))
+                throw new ArgumentException("Player is trying to draw a non-peeked card.");
+            c.IsOnTable = false;
+            p.Cards.Add(c);
+            return;
+        }
+        
         /// <summary>
         /// Puts permcard on table in front of player. If a card is returned, it means the permcard was a weapon and the returned card is the discarded weapon.
         /// </summary>

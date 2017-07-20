@@ -29,7 +29,7 @@ namespace BangGameBot
             return buttons;
         }
 
-        private List<InlineKeyboardButton[]> MakeMenuFromCards(List<Card> list)
+        private List<InlineKeyboardButton[]> MakeMenuFromCards(IEnumerable<Card> list)
         {
             var buttons = new List<InlineKeyboardButton[]>();
             foreach (var c in list)
@@ -108,28 +108,31 @@ namespace BangGameBot
         private void SendMessages (Player[] menurecipients = null, IReplyMarkup menu = null)
         {
             menurecipients = menurecipients ?? Players.ToArray();
-            foreach (var p in Players)
-            {
-                if (!String.IsNullOrWhiteSpace(p.QueuedMsg) && (p.TurnMsg == null || (p.TurnMsg.Text + p.QueuedMsg).Length > 4000))
-                    p.TurnMsg = Bot.Send(p.QueuedMsg, p.Id, (menurecipients.Contains(p) ? menu : null)).Result;
-                else if (p.TurnMsg != null)
-                {
-                    if (!String.IsNullOrWhiteSpace(p.QueuedMsg))
-                        p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, (menurecipients.Contains(p) ? menu : null)).Result;
-                    else if (menu != p.CurrentMenu)
-                    {
-                        Bot.EditMenu(menu, p.TurnMsg);
-                        p.CurrentMenu = menu;
-                    }
-                }
-                p.QueuedMsg = "\n";
-            }
+            foreach (var p in menurecipients)
+                SendMessagesToSingle(p, menu);
+            foreach (var p in Players.Where(x => !menurecipients.Contains(x)))
+                SendMessagesToSingle(p, null);
             return;
         }
-
+        
         private void SendMessages(Player menurecipient, IReplyMarkup menu = null)
         {
             SendMessages(menurecipient.ToSinglet(), menu);
+            return;
+        }
+
+        private void SendMessagesToSingle(Player p, IReplyMarkup menu = null)
+        {
+            if (!String.IsNullOrWhiteSpace(p.QueuedMsg) && (p.TurnMsg == null || (p.TurnMsg.Text + p.QueuedMsg).Length > 4000))
+                p.TurnMsg = Bot.Send(p.QueuedMsg, p.Id, menu).Result;
+            else if (p.TurnMsg != null && !String.IsNullOrWhiteSpace(p.QueuedMsg))
+                p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, menu).Result;
+            else if (p.TurnMsg != null && menu != p.CurrentMenu)
+            {
+                Bot.EditMenu(menu, p.TurnMsg);
+                p.CurrentMenu = menu;
+            }
+            p.QueuedMsg = "\n";
             return;
         }
 
@@ -146,20 +149,27 @@ namespace BangGameBot
                 "Cards on table: \n" + choice.CardsOnTable.Aggregate("", (s, c) => s + "- " + c.GetDescription() + "\n");
             Bot.SendAlert(q, text);
         }
-        
-        private Choice WaitForChoice(Player p, int maxseconds)
+
+
+        private Dictionary<Player,Choice> WaitForChoice(IEnumerable<Player> list, int maxseconds)
         {
 #if DEBUG
             maxseconds = int.MaxValue;
 #endif
-            p.Choice = null;
+            foreach (var p in list)
+                p.Choice = null;
             var timer = 0;
-            while (p.Choice == null && timer < maxseconds)
+            while (list.Any(p => p.Choice == null) && timer < maxseconds)
             {
                 Task.Delay(1000).Wait();
                 timer++;
             }
-            return p.Choice;
+            return list.ToDictionary(x => x, y => y.Choice);
+        }
+
+        private Choice WaitForChoice(Player p, int maxseconds)
+        {
+            return WaitForChoice(p.ToSinglet(), maxseconds).First().Value;
         }
 
         public void HandleChoice(Player p, string[] args, CallbackQuery q)

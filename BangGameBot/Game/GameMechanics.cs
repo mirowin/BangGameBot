@@ -17,7 +17,7 @@ namespace BangGameBot
             AssignCharacters();
             DealCards();
 
-            while (true)
+            while (Status != GameStatus.Ending)
             {
                 Status = GameStatus.PhaseZero;
                 Turn = (Turn + 1) % Players.Count();
@@ -31,13 +31,18 @@ namespace BangGameBot
                     PhaseOne(currentplayer);
                     PhaseTwo(currentplayer);
                     PhaseThree(currentplayer);
-                    SendMessages(); //do a last send and disable menus
+                    if (Status != GameStatus.Ending)
+                        SendMessages(); //do a last send and disable menus
                 }
-                else
+                else if (Status != GameStatus.Ending)
                     Discard(currentplayer, currentplayer.CardsOnTable.First(x => x.Name == CardName.Jail));
 
                 ResetPlayers();
             }
+
+            Players.Clear();
+            Handler.Games.Remove(this);
+            return;
         }
 
         private void ResetPlayers()
@@ -125,6 +130,8 @@ namespace BangGameBot
                 {
                     TellEveryone("The dynamite explodes!", false);
                     HitPlayer(curplayer, 3);
+                    if (Players.Count() == 0) return;
+
                     Discard(curplayer, dynamite);
                 }
                 else
@@ -157,6 +164,7 @@ namespace BangGameBot
 
         private void PhaseOne(Player curplayer)
         {
+            if (Status == GameStatus.Ending) return;
             Status = GameStatus.PhaseOne;
 
             List<Card> cardsdrawn;
@@ -219,6 +227,7 @@ namespace BangGameBot
 
         private void PhaseTwo(Player curplayer)
         {
+            if (Status == GameStatus.Ending) return;
             Status = GameStatus.PhaseTwo;
 
             bool firsttime = true;
@@ -318,9 +327,8 @@ namespace BangGameBot
                         UseBang(curplayer);
                         break;
                     case CardName.Beer:
-                        if (Players.Count() == 2) {
+                        if (Players.Count() == 2) 
                             throw new Exception("Someone is using a Beer in the final duel!");
-                        }
                         curplayer.AddLives(1);
                         Tell($"You regained one life point.", curplayer, false, $"{curplayer.Name} regained one life point.");
                         break;
@@ -329,24 +337,37 @@ namespace BangGameBot
                         UsePanicOrCatBalou(curplayer, cardchosen.Name == CardName.CatBalou);
                         break;
                     case CardName.Duel:
-                        //TODO
+                        UseDuel(curplayer);
                         break;
                     case CardName.Gatling:
                         Tell(null, curplayer, true, $"{curplayer.Name} shot everyone!");
-                        foreach (var target in Players) //if this works, I'm a genius. Probably it won't tho. RIP
+                        for (var i = Turn + 1; i != Turn; i = ++i % Players.Count())
                         {
-                            new Task(() =>
+                            var target = Players[i];
+                            if (!Missed(curplayer, target, true))
                             {
-                                if (!Missed(curplayer, target, true))
-                                    HitPlayer(target, 1, curplayer);
-                            }).Start();
+                                HitPlayer(target, 1, curplayer);
+                                if (Status == GameStatus.Ending) return;
+                            }
                         }
                         break;
                     case CardName.GeneralStore:
-                        //TODO
+                        var reshuffled = Dealer.PeekCards(Players.Count()).Item2;
+                        TellEveryone(Dealer.PeekedCards.Aggregate($"{curplayer.Name} draws the following cards from the deck " + (reshuffled ? "reshuffling it" : "") + ":\n", (s, c) => s + c.GetDescription() + "\n"), true);
+                        SendMessages();
+                        for (var i = Turn; i != Turn; i = ++i % Players.Count())
+                        {
+                            var player = Players[i];
+                            Tell("Choose the card to take in hand.", player, i == Turn);
+                            SendMessagesToSingle(player, MakeMenuFromCards(Dealer.PeekedCards).ToKeyboard());
+                            var chosencard = WaitForChoice(player, 30)?.CardChosen ?? DefaultChoice.ChooseCardFrom(Dealer.PeekedCards);
+                            Tell($"You take {chosencard.GetDescription()} in hand.", player, false);
+                            TellEveryone($"{player.Name} took {chosencard.GetDescription()} in hand", i == Turn, player.ToSinglet());
+                            Dealer.DrawFromPeeked(player, chosencard);
+                        }
                         break;
                     case CardName.Indians:
-                        //TODO
+                        UseIndians(curplayer);
                         break;
                     case CardName.Saloon:
                         foreach (var p in Players)
@@ -362,6 +383,73 @@ namespace BangGameBot
                 }
                 SendMessages();
             }
+            return;
+        }
+
+        private void UseDuel(Player curplayer)
+        {
+            var possiblechoices = Players.Where(x => x.Id != curplayer.Id);
+            Player target;
+            if (possiblechoices.Count() == 1)
+            {
+                target = possiblechoices.First();
+            }
+            else
+            {
+                Tell("Choose a player to challenge to duel.", curplayer, false);
+                SendMessages(curplayer, possiblechoices.Select(x => (new[] { new InlineKeyboardButton(x.Name, $"{Id}|player|{x.Id}") })).ToKeyboard());
+                target = WaitForChoice(curplayer, 30)?.PlayerChosen ?? DefaultChoice.ChoosePlayer(possiblechoices);
+                Tell($"You chose to challenge {target.Name} to duel.", curplayer, false);
+            }
+
+            var duelling = new[] { target, curplayer };
+            for (var i = 0; true; i = 1 - i)
+            {
+                var player = duelling[i];
+                if (player.CardsInHand.Any(c => c.Name == CardName.Bang) || (player.CardsInHand.Any(c => c.Name == CardName.Missed) && player.Character == Character.CalamityJanet))
+                {
+                    Tell("You may discard a Bang! card, or lose a life point.", player, false);
+                    SendMessagesToSingle(player, AddYesButton(MakeCardsInHandMenu(player, Situation.DiscardBang), "Lose a life point").ToKeyboard());
+                    WaitForChoice(player, 30);
+                    if (player.Choice?.CardChosen != null)
+                    {
+                        if (player.Choice.CardChosen.Name != CardName.Bang && (player.Choice.CardChosen.Name != CardName.Missed || player.Character != Character.CalamityJanet))
+                            throw new Exception("The player was meant to discard a Bang! card.");
+                        Discard(player, player.Choice.CardChosen);
+                        Tell($"You discarded {player.Choice.CardChosen.GetDescription()}.", player, false, $"{player.Name} discarded {player.Choice.CardChosen.GetDescription()}");
+                        continue;
+                    }
+                }
+                HitPlayer(player, 1, duelling[1 - i]);
+                if (Status == GameStatus.Ending) return;
+                break;
+            }
+            return;
+        }
+
+        private void UseIndians(Player curplayer)
+        {
+            var candiscard = Players.Where(x => x.Id != curplayer.Id && (x.CardsInHand.Any(c => c.Name == CardName.Bang) || (x.Character == Character.CalamityJanet && x.CardsInHand.Any(c => c.Name == CardName.Missed))));
+            foreach (var p in candiscard)
+            {
+                Tell("You have a Bang! card! You may discard it, or lose a life point.", p, false);
+                SendMessagesToSingle(p, AddYesButton(MakeCardsInHandMenu(p, Situation.DiscardBang), "Lose a life point").ToKeyboard());
+            }
+            WaitForChoice(candiscard, 30);
+            var missedplayers = candiscard.Where(x => x.Choice?.CardChosen != null);
+            foreach (var p in missedplayers)
+            {
+                if (p.Choice.CardChosen.Name != CardName.Bang && (p.Choice.CardChosen.Name != CardName.Missed || p.Character != Character.CalamityJanet))
+                    throw new Exception("The player was meant to discard a Bang! card.");
+                Discard(p, p.Choice.CardChosen);
+                Tell($"You discarded {p.Choice.CardChosen.GetDescription()}.", p, false, $"{p.Name} discarded {p.Choice.CardChosen.GetDescription()}");
+            }
+            foreach (var p in Players.Where(x => !missedplayers.Contains(x)))
+            {
+                HitPlayer(p, 1, curplayer);
+                if (Status == GameStatus.Ending) return;
+            }
+            return;
         }
 
         private void UseBang(Player attacker)
@@ -386,7 +474,10 @@ namespace BangGameBot
             Tell($"You were shot by {attacker.Name}!" + (attacker.Character == Character.SlabTheKiller ? " You'll need two Missed! cards to miss his Bang!" : ""), attacker, true);
 
             if (!Missed(attacker, target, false))
+            {
                 HitPlayer(target, 1, attacker);
+                if (Status == GameStatus.Ending) return;
+            }
 
             return;
 
@@ -473,6 +564,7 @@ namespace BangGameBot
 
         private void PhaseThree(Player curplayer)
         {
+            if (Status == GameStatus.Ending) return;
             Status = GameStatus.PhaseThree;
 
             bool firsttime = true;
@@ -641,11 +733,18 @@ namespace BangGameBot
                         return ErrorMessage.NoError;
                     else
                         return ErrorMessage.UseBeer;
+
                 case Situation.PlayerShot:
                     if (card.Name == CardName.Missed || (card.Name == CardName.Bang && player.Character == Character.CalamityJanet))
                         return ErrorMessage.NoError;
                     else
                         return ErrorMessage.UseMissed;
+
+                case Situation.DiscardBang:
+                    if (card.Name == CardName.Bang || (card.Name == CardName.Missed && player.Character == Character.CalamityJanet))
+                        return ErrorMessage.NoError;
+                    else
+                        return ErrorMessage.UseBang;
                 //normal situation
                 case Situation.Standard:
                 default:
@@ -749,7 +848,7 @@ namespace BangGameBot
         private void HitPlayer(Player target, int lives, Player attacker = null)
         {
             target.AddLives(-lives);
-            Tell($"You lose {lives} lives.", target, true, $"{target.Name} loses {lives} lives.\n");
+            Tell($"You lose {lives} life points.", target, true, $"{target.Name} loses {lives} life points.\n");
 
             if (target.Lives <= 0 && LethalHit(target))
                 PlayerDies(target);
@@ -838,6 +937,9 @@ namespace BangGameBot
             Players.Remove(target);
             DeadPlayers.Add(target);
 
+            CheckForGameEnd(target);
+            if (Status == GameStatus.Ending) return;
+
             var vulturesam = Players.FirstOrDefault(x => x.Character == Character.VultureSam);
             if (vulturesam != null)
             {
@@ -855,5 +957,36 @@ namespace BangGameBot
             return;
         }
 
+        private void CheckForGameEnd(Player deadplayer)
+        {
+            if (deadplayer.Role == Role.Sheriff && Players.Any(x => x.Role == Role.Outlaw))
+            {
+                foreach (var p in Players.Union(DeadPlayers))
+                {
+                    var outlaws = Players.Where(x => x.Role == Role.Outlaw);
+                    Bot.Send($"The Sheriff has died! The Outlaws " + string.Join(", ", outlaws.Select(x => x.Name)) + " have won!", p.Id);
+                }
+                Status = GameStatus.Ending;
+            }
+            else if (deadplayer.Role == Role.Sheriff && Players.All(x => x.Role == Role.Renegade))
+            {
+                foreach (var p in Players.Union(DeadPlayers))
+                {
+                    var renegade = Players.First();
+                    Bot.Send($"The Sheriff has died! The Renegade " + renegade.Name + " has won!", p.Id);
+                }
+                Status = GameStatus.Ending;
+            }
+            else if (!Players.Any(x => x.Role == Role.Outlaw))
+            {
+                foreach (var p in Players.Union(DeadPlayers))
+                {
+                    var renegade = Players.FirstOrDefault(x => x.Role == Role.Renegade);
+                    Bot.Send($"All the Outlaws have died! The Sheriff and the Deputies have won" + (renegade != null ? $", and the Renegade {renegade.Name} has lost" : "") + "!" , p.Id);
+                }
+                Status = GameStatus.Ending;
+            }
+            return;
+        }
     }
 }

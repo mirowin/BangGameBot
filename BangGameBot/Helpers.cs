@@ -17,7 +17,8 @@ namespace BangGameBot
             {ErrorMessage.MaxLives, "You already have the maximum possible life points!" },
             {ErrorMessage.NoReachablePlayers, "You can't reach any player with your weapon!" },
             {ErrorMessage.BeerFinalDuel, "Beers have no effect when only two players are left!" },
-            {ErrorMessage.UseMissed, "You have to use a Missed! card!" }
+            {ErrorMessage.UseMissed, "You have to use a Missed! card!" },
+            {ErrorMessage.UseBang, "You have to use a Bang! card!" }
         };
 
         public static readonly List<InlineQueryResultCachedPhoto> Cards = new List<InlineQueryResultCachedPhoto>() {

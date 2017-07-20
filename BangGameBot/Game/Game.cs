@@ -19,9 +19,10 @@ namespace BangGameBot
         private static int NextId = 0;
 
         public Game (Message msg) {
-            Id = NextId++;
+            Id = NextId++; //TODO reuse ids
             
             AddPlayer(msg.From);
+            return;
         }
 
         public void AddPlayer (User u) {

@@ -26,7 +26,7 @@ namespace BangGameBot
             return players.Random();
         }
         public static readonly Card ChooseCard = null;
-        public static Card ChooseCardFrom(List<Card> cards) {
+        public static Card ChooseCardFrom(IEnumerable<Card> cards) {
             return cards.Random();
         }
         public static readonly bool DiscardCard = false;
