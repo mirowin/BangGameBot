@@ -66,14 +66,11 @@ namespace BangGameBot
             {
                 Bot.Delete(p.PlayerListMsg);
                 p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
-                return;
             }
             else if (p.PlayerListMsg == null)
                 p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
-            else if (p.PlayerListMsg != null && !newturn && !text.IsHTMLEqualTo(p.PlayerListMsg.Text))
+            else if (p.PlayerListMsg != null && !newturn)
                 p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, menu).Result;
-            else
-                throw new Exception("You are doing wrong logic somewhere...");
         }
 
         private InlineKeyboardMarkup GetPlayerMenu(Player p)
