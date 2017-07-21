@@ -113,7 +113,7 @@ namespace BangGameBot
                             game.PlayerLeave(player);
                             break;
                         case "playerinfo":
-                            game.SendPlayerInfo(q, game.Players.FirstOrDefault(x => x.Id == int.Parse(args[2])), player);
+                            game.SendPlayerInfo(q, game.Players.FirstOrDefault(x => x.Id == long.Parse(args[2])), player);
                             break;
                         default:
                             game.HandleChoice(player, args.Skip(1).ToArray(), q);

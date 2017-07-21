@@ -43,13 +43,12 @@ namespace BangGameBot
             return buttons;
         }
 
-        private void SendPlayerList(Player p = null)
+        private void SendPlayerList(bool newturn, Player p = null)
         {
             if (p == null)
             {
                 Players.ForEach(pl => {
-                    Bot.Delete(pl.PlayerListMsg);
-                    SendPlayerList(pl);
+                    SendPlayerList(newturn, pl);
                 });
                 return;
             }
@@ -63,13 +62,24 @@ namespace BangGameBot
                 (Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
             );
             var menu = GetPlayerMenu(p);
-            p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+            if (p.PlayerListMsg != null && newturn)
+            {
+                Bot.Delete(p.PlayerListMsg);
+                p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+                return;
+            }
+            else if (p.PlayerListMsg == null)
+                p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+            else if (p.PlayerListMsg != null && !newturn && !text.IsHTMLEqualTo(p.PlayerListMsg.Text))
+                p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, menu).Result;
+            else
+                throw new Exception("You are doing wrong logic somewhere...");
         }
 
         private InlineKeyboardMarkup GetPlayerMenu(Player p)
         {
             var result = new List<InlineKeyboardButton[]>();
-            result.AddRange(Players.Select(x => new[] { new InlineKeyboardButton(x.Name, $"{Id}|playerinfo|{x.Id}") }));
+            result.AddRange(Players.Where(x => x.Id != p.Id).Select(x => new[] { new InlineKeyboardButton(x.Name, $"{Id}|playerinfo|{x.Id}") }));
             result.Add(new[] {
                 new InlineKeyboardButton("Your cards", $"{Id}|playerinfo|{p.Id}"),
                 InlineKeyboardButton.WithSwitchInlineQueryCurrentChat("Help")
@@ -92,9 +102,11 @@ namespace BangGameBot
                 textforp = "\n" + textforp;
                 textforothers = "\n" + textforothers;
             }
-            p.QueuedMsg = p.QueuedMsg.TrimEnd('\n') + textforp + "\n";
-            foreach (var pl in Players.Where(x => x.Id != p.Id))
-                pl.QueuedMsg = pl.QueuedMsg.TrimEnd('\n') + textforothers + "\n";
+            if (!String.IsNullOrWhiteSpace(textforp))
+                p.QueuedMsg = p.QueuedMsg + textforp + "\n";
+            if (!String.IsNullOrWhiteSpace(textforothers))
+                foreach (var pl in Players.Where(x => x.Id != p.Id))
+                    pl.QueuedMsg = pl.QueuedMsg + textforothers + "\n";
             return;
         }
 
@@ -128,11 +140,9 @@ namespace BangGameBot
             else if (p.TurnMsg != null && !String.IsNullOrWhiteSpace(p.QueuedMsg))
                 p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, menu).Result;
             else if (p.TurnMsg != null && menu != p.CurrentMenu)
-            {
                 Bot.EditMenu(menu, p.TurnMsg);
-                p.CurrentMenu = menu;
-            }
             p.QueuedMsg = "\n";
+            p.CurrentMenu = menu;
             return;
         }
 
@@ -140,36 +150,69 @@ namespace BangGameBot
         {
             var text = "";
             text = choice.Name + "\n" +
-                choice.Character.GetString<Character>() + (choice.Role == Role.Sheriff ? " - SHERIFF" : "") + "\n" +
-                choice.LivesString() + "\n\n" +
+                "CHARACTER: " + choice.Character.GetString<Character>() + "\n" +
+                "ROLE: " + (choice.Role == Role.Sheriff ? " Sheriff" : (choice.Id == recipient.Id ? choice.Role.GetString<Role>() : "Unknown")) + "\n" +
+                "LIFE POINTS: " + choice.LivesString() + "\n\n" +
                 "Cards in hand: " + (choice.Id == recipient.Id ? 
-                    recipient.CardsOnTable.Aggregate("\n", (s, c) => s + "- " + c.GetDescription() + "\n") :
-                    choice.CardsInHand.Count().ToString()
-                ) +
-                "Cards on table: \n" + choice.CardsOnTable.Aggregate("", (s, c) => s + "- " + c.GetDescription() + "\n");
+                    ("\n" + string.Join(", ", recipient.CardsInHand.Select(x => x.GetDescription())) + "\n") :
+                    (choice.CardsInHand.Count().ToString())
+                ) + "\n" +
+                "Cards on table:\n" + string.Join(", ", choice.CardsOnTable.Select(x => x.GetDescription()));
             Bot.SendAlert(q, text);
         }
 
+        private void UpdateJoinMessages(bool startinggame = false, bool addingplayer = false)
+        {
+            foreach (var p in Players)
+            {
+                //"title"
+                string text = startinggame ? "Game started!" : "You have been added to a game.";
+                //help for the button
+                if (Players.Count() >= MinPlayers && !startinggame)
+                    text += p.VotedToStart ? "\nClick the Unvote button to remove your vote." : "\nClick the Start button to vote to start the game.";
+                //playerlist
+                text += "\n\n" + "Players:".ToBold();
+                text += Players.Aggregate("", (a, b) => a + "\n" + b.TelegramUser.FirstName + (b.VotedToStart || startinggame ? " 👍" : ""));
 
-        private Dictionary<Player,Choice> WaitForChoice(IEnumerable<Player> list, int maxseconds)
+                text += startinggame ? "\n\nShuffling the deck and assigning roles and characters..." : "";
+
+                //menu
+                var buttons = new List<InlineKeyboardButton>();
+                buttons.Add(new InlineKeyboardButton("Leave", $"{Id}|leave"));
+                if (Players.Count() >= MinPlayers)
+                    buttons.Add(new InlineKeyboardButton(p.VotedToStart ? "Unvote" : "Start", $"{Id}|start"));
+                var menu = new InlineKeyboardMarkup(buttons.ToArray());
+
+                if (p.PlayerListMsg == null)
+                    p.PlayerListMsg = Bot.Send(text, p.Id, startinggame ? null : menu).Result;
+                else if (addingplayer)
+                {
+                    Bot.Delete(p.PlayerListMsg);
+                    p.PlayerListMsg = Bot.Send(text, p.Id, startinggame ? null : menu).Result;
+                }
+                else
+                    p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, startinggame ? null : menu).Result;
+
+                if (startinggame)
+                    p.PlayerListMsg = null;
+            }
+            return;
+        }
+
+        
+        private Choice WaitForChoice(Player p, int maxseconds)
         {
 #if DEBUG
             maxseconds = int.MaxValue;
 #endif
-            foreach (var p in list)
-                p.Choice = null;
+            p.Choice = null;
             var timer = 0;
-            while (list.Any(p => p.Choice == null) && timer < maxseconds)
+            while (p.Choice == null && timer < maxseconds)
             {
                 Task.Delay(1000).Wait();
                 timer++;
             }
-            return list.ToDictionary(x => x, y => y.Choice);
-        }
-
-        private Choice WaitForChoice(Player p, int maxseconds)
-        {
-            return WaitForChoice(p.ToSinglet(), maxseconds).First().Value;
+            return p.Choice;
         }
 
         public void HandleChoice(Player p, string[] args, CallbackQuery q)

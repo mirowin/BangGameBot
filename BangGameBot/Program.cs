@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -38,7 +39,7 @@ namespace BangGameBot
         {
             if (!Bot.Api.IsReceiving)
                 Bot.StartReceiving();
-            LogError(e.Exception);
+            //LogError(e.Exception);
             return;
         }
 
@@ -46,7 +47,8 @@ namespace BangGameBot
         {
             if (!Bot.Api.IsReceiving)
                 Bot.StartReceiving();
-            LogError(e.ApiRequestException);
+            if (!e.ApiRequestException.Message.Contains("timed out"))
+                LogError(e.ApiRequestException);
             return;
         }
 
@@ -70,6 +72,8 @@ namespace BangGameBot
 
         public static void LogError (Exception e)
         {
+            if ((e is ApiRequestException && e.Message == "Request timed out") || (e is TaskCanceledException && e.Message == "Un'attività è stata annullata."))
+                return;
             var msg = "";
             do {
                 msg = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") + " - " + e.GetType().ToString() + " " + e.Source +
@@ -89,12 +93,11 @@ namespace BangGameBot
 
 
     static class Bot {
-        public static TelegramBotClient Api = new TelegramBotClient("428831964:AAFWsNWVcEu9nbM1_tvfoU-8xpryuZnMMwE");
+        public static TelegramBotClient Api = new TelegramBotClient(System.IO.File.ReadAllText(Program.TokenPath)) { Timeout = TimeSpan.FromSeconds(0.5) };
         public static User Me = Api.GetMeAsync().Result;
 
         public static void StartReceiving()
         {
-            Api.Timeout = TimeSpan.FromMilliseconds(100);
             Api.StartReceiving();
         }
 

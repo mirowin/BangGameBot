@@ -11,7 +11,6 @@ namespace BangGameBot
     {
         private void StartGame()
         {
-            UpdateJoinMessages(true);
             Status = GameStatus.PhaseZero;
             AssignRoles();
             AssignCharacters();
@@ -21,7 +20,7 @@ namespace BangGameBot
             {
                 Status = GameStatus.PhaseZero;
                 Turn = (Turn + 1) % Players.Count();
-                SendPlayerList();
+                SendPlayerList(true);
                 if (Turn == Players.Count())
                     Turn = 0;
                 var currentplayer = Players[Turn];
@@ -310,6 +309,8 @@ namespace BangGameBot
                         Tell($"You put {cardchosen.GetDescription()} in play" + msg, curplayer, false, $"{curplayer.Name} put {cardchosen.GetDescription()} in play" + msg);
                         //TODO maybe inform players what this means.
                     }
+                    if (cardchosen.Name == CardName.Mustang || cardchosen.Name == CardName.Scope)
+                        SendPlayerList(false);
                     SendMessages();
                     continue;
                 }
@@ -331,6 +332,7 @@ namespace BangGameBot
                             throw new Exception("Someone is using a Beer in the final duel!");
                         curplayer.AddLives(1);
                         Tell($"You regained one life point.", curplayer, false, $"{curplayer.Name} regained one life point.");
+                        SendPlayerList(false);
                         break;
                     case CardName.CatBalou:
                     case CardName.Panic:
@@ -359,7 +361,7 @@ namespace BangGameBot
                         {
                             var player = Players[i];
                             Tell("Choose the card to take in hand.", player, i == Turn);
-                            SendMessagesToSingle(player, MakeMenuFromCards(Dealer.PeekedCards).ToKeyboard());
+                            SendMessages(player, MakeMenuFromCards(Dealer.PeekedCards).ToKeyboard());
                             var chosencard = WaitForChoice(player, 30)?.CardChosen ?? DefaultChoice.ChooseCardFrom(Dealer.PeekedCards);
                             Tell($"You take {chosencard.GetDescription()} in hand.", player, false);
                             TellEveryone($"{player.Name} took {chosencard.GetDescription()} in hand", i == Turn, player.ToSinglet());
@@ -409,7 +411,7 @@ namespace BangGameBot
                 if (player.CardsInHand.Any(c => c.Name == CardName.Bang) || (player.CardsInHand.Any(c => c.Name == CardName.Missed) && player.Character == Character.CalamityJanet))
                 {
                     Tell("You may discard a Bang! card, or lose a life point.", player, false);
-                    SendMessagesToSingle(player, AddYesButton(MakeCardsInHandMenu(player, Situation.DiscardBang), "Lose a life point").ToKeyboard());
+                    SendMessages(player, AddYesButton(MakeCardsInHandMenu(player, Situation.DiscardBang), "Lose a life point").ToKeyboard());
                     WaitForChoice(player, 30);
                     if (player.Choice?.CardChosen != null)
                     {
@@ -433,9 +435,23 @@ namespace BangGameBot
             foreach (var p in candiscard)
             {
                 Tell("You have a Bang! card! You may discard it, or lose a life point.", p, false);
-                SendMessagesToSingle(p, AddYesButton(MakeCardsInHandMenu(p, Situation.DiscardBang), "Lose a life point").ToKeyboard());
+                SendMessages(p, AddYesButton(MakeCardsInHandMenu(p, Situation.DiscardBang), "Lose a life point").ToKeyboard());
             }
-            WaitForChoice(candiscard, 30);
+
+            var tasks = new List<Task>();
+            foreach (var p in candiscard)
+            {
+                var task = new Task(() => {
+                    var choice = WaitForChoice(p, 30)?.CardChosen;
+                    Tell("You chose to " + (choice != null ? "discard a Bang! card." : "lose a life point.") + "\nWaiting for the other players to choose...", p, false);
+                    SendMessagesToSingle(p);
+                });
+                tasks.Add(task);
+                task.Start();
+            }
+            while (tasks.Any(x => !x.IsCompleted))
+                Task.Delay(1000).Wait();
+            
             var missedplayers = candiscard.Where(x => x.Choice?.CardChosen != null);
             foreach (var p in missedplayers)
             {
@@ -444,7 +460,7 @@ namespace BangGameBot
                 Discard(p, p.Choice.CardChosen);
                 Tell($"You discarded {p.Choice.CardChosen.GetDescription()}.", p, false, $"{p.Name} discarded {p.Choice.CardChosen.GetDescription()}");
             }
-            foreach (var p in Players.Where(x => !missedplayers.Contains(x)))
+            foreach (var p in Players.Where(x => !missedplayers.Contains(x) && x.Id != curplayer.Id))
             {
                 HitPlayer(p, 1, curplayer);
                 if (Status == GameStatus.Ending) return;
@@ -471,7 +487,7 @@ namespace BangGameBot
             }
 
             TellEveryone($"{attacker.Name} shot {target.Name}!", false, new[] { target, attacker });
-            Tell($"You were shot by {attacker.Name}!" + (attacker.Character == Character.SlabTheKiller ? " You'll need two Missed! cards to miss his Bang!" : ""), attacker, true);
+            Tell($"You were shot by {attacker.Name}!" + (attacker.Character == Character.SlabTheKiller ? " You'll need two Missed! cards to miss his Bang!" : ""), target, true);
 
             if (!Missed(attacker, target, false))
             {
@@ -532,7 +548,7 @@ namespace BangGameBot
                 "You are Jourdounnais: you are considered to have a Barrel in play. Do you want to use this ability?" : 
                 "You have a Barrel in play. Do you want to use it?",
                 target, false);
-            var candefend = (jourdounnais && target.CardsOnTable.Any(x => x.Name == CardName.Barrel)) || target.CardsInHand.Any(x => x.Name == CardName.Missed);
+            var candefend = (jourdounnais && target.CardsOnTable.Any(x => x.Name == CardName.Barrel)) || (target.CardsInHand.Any(x => x.Name == CardName.Missed) || (target.CardsInHand.Any(x => x.Name == CardName.Bang) && target.Character == Character.CalamityJanet));
             SendMessages(target, MakeBoolMenu(jourdounnais ? "Use ability" : "Use Barrel", candefend ? "Defend otherwise" : "Lose a life point"));
             var choice = WaitForChoice(target, 20)?.ChoseYes ?? DefaultChoice.UseBarrel;
             if (!choice)
@@ -584,7 +600,7 @@ namespace BangGameBot
                 //send the menu
                 var menu = MakeMenuFromCards(curplayer.CardsInHand);
                 if (curplayer.CardsInHand.Count() <= curplayer.Lives)
-                    AddYesButton(menu, "End of turn");
+                    menu = AddYesButton(menu, "End of turn");
                 SendMessages(curplayer, menu.ToKeyboard());
                 var choice = WaitForChoice(curplayer, 30);
                 //yes = end of turn
@@ -686,12 +702,12 @@ namespace BangGameBot
                 Tell(iscatbalou ? $"You discarded {card} from {playerchosen.Name}'s hand." : $"You stole {card} from {playerchosen.Name}'s hand.", 
                     curplayer, false, null);
                 Tell(iscatbalou? $"{curplayer.Name} discarded your {card}." : $"{curplayer.Name} stole you {card}", playerchosen, false, null);
-                TellEveryone(iscatbalou ? $"{curplayer.Name} discarded a card from {playerchosen.Name}'s hand." : $"{curplayer.Name} stole a card from {playerchosen.Name}'s hand.", false, new[] { curplayer, playerchosen });
+                TellEveryone(iscatbalou ? $"{curplayer.Name} discarded {card} from {playerchosen.Name}'s hand." : $"{curplayer.Name} stole a card from {playerchosen.Name}'s hand.", false, new[] { curplayer, playerchosen });
             }
             else
             {
                 //was from table
-                Tell($"You stole {card} from {playerchosen.Name}.", curplayer, false, $"{curplayer.Name} stole {card} from {playerchosen.Name}.");
+                Tell(iscatbalou ? $"You discarded {card} from {playerchosen.Name}" : $"You stole {card} from {playerchosen.Name}.", curplayer, false, iscatbalou ? $"{curplayer.Name} discarded {card} from {playerchosen.Name}." : $"{curplayer.Name} stole {card} from {playerchosen.Name}.");
             }
             SendMessages();
             return;
@@ -872,6 +888,7 @@ namespace BangGameBot
                         break;
                 }
             }
+            SendPlayerList(false);
             SendMessages();
             return;
         }
@@ -959,33 +976,22 @@ namespace BangGameBot
 
         private void CheckForGameEnd(Player deadplayer)
         {
+            var finalmsg = "";
             if (deadplayer.Role == Role.Sheriff && Players.Any(x => x.Role == Role.Outlaw))
-            {
-                foreach (var p in Players.Union(DeadPlayers))
-                {
-                    var outlaws = Players.Where(x => x.Role == Role.Outlaw);
-                    Bot.Send($"The Sheriff has died! The Outlaws " + string.Join(", ", outlaws.Select(x => x.Name)) + " have won!", p.Id);
-                }
-                Status = GameStatus.Ending;
-            }
+                finalmsg = $"The Sheriff has died! The Outlaws " + string.Join(", ", Players.Where(x => x.Role == Role.Outlaw).Select(x => x.Name)) + " have won!";
             else if (deadplayer.Role == Role.Sheriff && Players.All(x => x.Role == Role.Renegade))
-            {
-                foreach (var p in Players.Union(DeadPlayers))
-                {
-                    var renegade = Players.First();
-                    Bot.Send($"The Sheriff has died! The Renegade " + renegade.Name + " has won!", p.Id);
-                }
-                Status = GameStatus.Ending;
-            }
+                finalmsg = $"The Sheriff has died! The Renegade {Players.First().Name} has won!";
             else if (!Players.Any(x => x.Role == Role.Outlaw))
+                finalmsg = $"The Renegade and the Outlaws have died! The Sheriff and the Deputies have won, and the Renegade {Players.Union(DeadPlayers).First(x => x.Role == Role.Renegade).Name} has lost!";
+
+            if (!String.IsNullOrEmpty(finalmsg))
             {
-                foreach (var p in Players.Union(DeadPlayers))
-                {
-                    var renegade = Players.FirstOrDefault(x => x.Role == Role.Renegade);
-                    Bot.Send($"All the Outlaws have died! The Sheriff and the Deputies have won" + (renegade != null ? $", and the Renegade {renegade.Name} has lost" : "") + "!" , p.Id);
-                }
                 Status = GameStatus.Ending;
+                SendMessages();
+                foreach (var p in Players)
+                    Bot.Send(finalmsg, p.Id);
             }
+
             return;
         }
     }
