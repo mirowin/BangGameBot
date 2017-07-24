@@ -29,7 +29,7 @@ namespace BangGameBot
             get
             {
                 var r = Cards.Where(x => x.IsOnTable).ToList();
-                if (r.Any(x => x.Type == CardType.Normal))
+                if (r.Any(x => x.GetCardType() == CardType.Normal))
                     throw new Exception($"Card on table is normal");
                 return r;
             }
@@ -47,7 +47,7 @@ namespace BangGameBot
         {
             TelegramUser = u;
             Id = u.Id;
-            Name = (u.FirstName.Length < 10 ? u.FirstName : u.FirstName.Substring(0, 10) + "...").FormatHTML();
+            Name = (u.FirstName.Length < 10 ? u.FirstName : u.FirstName.Substring(0, 10) + "...").ToBold();
         }
 
         /// <summary>

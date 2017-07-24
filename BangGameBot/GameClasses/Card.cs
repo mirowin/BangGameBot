@@ -7,7 +7,6 @@ namespace BangGameBot
     {
         public int Id { get; }
         public CardName Name { get; }
-        public CardType Type { get; }
         public bool IsOnTable { get; set; } = false;
         public int Number { get; }
         public CardSuit Suit { get; }
@@ -23,12 +22,13 @@ namespace BangGameBot
                 }
 
                 Id = nextIndex;
-            }   
+            }
             Name = t;
             Number = n;
             Suit = s;
-            Type = t.CompareTo(CardName.Saloon) > 0 ? (t.CompareTo(CardName.Mustang) > 0 ? CardType.Weapon : CardType.PermCard) : CardType.Normal;
         }
+
+        
 
         private static List<bool> UsedCounter = new List<bool>();
         private static object Lock = new object();

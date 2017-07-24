@@ -243,6 +243,27 @@ namespace BangGameBot
                 .Replace("&gt;", ">")
                 .Replace("&quot;", "\"");
         }
+
+        public static CardType GetCardType(this Card card)
+        {
+            switch (card.Name)
+            {
+                case CardName.Jail:
+                case CardName.Dynamite:
+                case CardName.Barrel:
+                case CardName.Scope:
+                case CardName.Mustang:
+                    return CardType.PermCard;
+                case CardName.Volcanic:
+                case CardName.Schofield:
+                case CardName.Remington:
+                case CardName.RevCarabine:
+                case CardName.Winchester:
+                    return CardType.Weapon;
+                default:
+                    return CardType.Normal;
+            }
+        }
     }
 }
 

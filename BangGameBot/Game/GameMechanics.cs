@@ -49,7 +49,6 @@ namespace BangGameBot
             foreach (var p in Players)
             {
                 p.UsedBang = false;
-                p.PlayerListMsg = null;
                 p.TurnMsg = null;
                 p.Choice = null; //just to be sure
             }
@@ -231,7 +230,7 @@ namespace BangGameBot
 
             bool firsttime = true;
             while (curplayer.CardsInHand.Count() > 0)
-            {
+            { 
                 //ask them what they want to do
                 Tell("Select the card you want to use.", curplayer, true);
                 var menu = AddYesButton(MakeCardsInHandMenu(curplayer, Situation.Standard), "Discard cards »");
@@ -252,9 +251,9 @@ namespace BangGameBot
                 var choice = WaitForChoice(curplayer, 60);
                 if (choice == null) //afk
                     return;
-                else if (choice.ChoseYes == true) //discard cards
+                if (choice.ChoseYes == true) //discard cards
                     return;
-                else if (choice.ChoseYes == false)
+                if (choice.ChoseYes == false)
                 {
                     if (curplayer.Character != Character.SidKetchum)
                         throw new Exception("Someone chose no during Phase Two...");
@@ -272,14 +271,14 @@ namespace BangGameBot
                         curplayer, false,
                         $"{curplayer.Name} discarded {chosencard.GetDescription()} and {secondchosencard.GetDescription()}, and regained a life point!");
                     curplayer.AddLives(1);
-                    SendMessages();
+                    //SendMessages();
                     continue;
                 }
             
 
                 //get the card
                 var cardchosen = choice.CardChosen;
-                if (cardchosen.Type == CardType.PermCard || cardchosen.Type == CardType.Weapon)
+                if (cardchosen.GetCardType() == CardType.PermCard || cardchosen.GetCardType() == CardType.Weapon)
                 {
                     if (cardchosen.Name == CardName.Jail)
                     {
@@ -311,7 +310,7 @@ namespace BangGameBot
                     }
                     if (cardchosen.Name == CardName.Mustang || cardchosen.Name == CardName.Scope)
                         SendPlayerList(false);
-                    SendMessages();
+                    //SendMessages();
                     continue;
                 }
 
@@ -355,16 +354,17 @@ namespace BangGameBot
                         break;
                     case CardName.GeneralStore:
                         var reshuffled = Dealer.PeekCards(Players.Count()).Item2;
-                        TellEveryone(Dealer.PeekedCards.Aggregate($"{curplayer.Name} draws the following cards from the deck " + (reshuffled ? "reshuffling it" : "") + ":\n", (s, c) => s + c.GetDescription() + "\n"), true);
+                        TellEveryone(Dealer.PeekedCards.Aggregate($"{curplayer.Name} draws the following cards from the deck" + (reshuffled ? " reshuffling it" : " ") + ":\n", (s, c) => s + c.GetDescription() + "\n"), true);
                         SendMessages();
-                        for (var i = Turn; i != Turn; i = ++i % Players.Count())
+                        for (var i = 0; i < Players.Count(); i++)
                         {
-                            var player = Players[i];
-                            Tell("Choose the card to take in hand.", player, i == Turn);
+                            var index = (i + Turn) % Players.Count();
+                            var player = Players[index];
+                            Tell("Choose the card to take in hand.", player, index == Turn);
                             SendMessages(player, MakeMenuFromCards(Dealer.PeekedCards).ToKeyboard());
                             var chosencard = WaitForChoice(player, 30)?.CardChosen ?? DefaultChoice.ChooseCardFrom(Dealer.PeekedCards);
                             Tell($"You take {chosencard.GetDescription()} in hand.", player, false);
-                            TellEveryone($"{player.Name} took {chosencard.GetDescription()} in hand", i == Turn, player.ToSinglet());
+                            TellEveryone($"{player.Name} took {chosencard.GetDescription()} in hand", index == Turn, player.ToSinglet());
                             Dealer.DrawFromPeeked(player, chosencard);
                         }
                         break;
@@ -404,7 +404,9 @@ namespace BangGameBot
                 Tell($"You chose to challenge {target.Name} to duel.", curplayer, false);
             }
 
+            Tell($"You have been challenged to duel!", target, false);
             var duelling = new[] { target, curplayer };
+            TellEveryone($"{curplayer.Name} challenged {target.Name} to duel.", false, duelling);
             for (var i = 0; true; i = 1 - i)
             {
                 var player = duelling[i];

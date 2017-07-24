@@ -116,13 +116,13 @@ namespace BangGameBot
         /// <param name="card">Card.</param>
         public Card PutPermCardOnTable(Player p, Card card)
         {
-            if (card.Type == CardType.Normal)
+            if (card.GetCardType() == CardType.Normal)
                 throw new ArgumentException("Player is putting non-permcard on table");
             if (card.IsOnTable)
                 throw new ArgumentException("Card already on table");
             card.IsOnTable = true;
             Card result = null;
-            if (card.Type == CardType.Weapon)
+            if (card.GetCardType() == CardType.Weapon)
             {
                 if (p.Weapon != null)
                 {

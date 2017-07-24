@@ -62,15 +62,17 @@ namespace BangGameBot
                 (Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
             );
             var menu = GetPlayerMenu(p);
-            if (p.PlayerListMsg != null && newturn)
+            if (p.PlayerListMsg == null)
+                p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+            else
             {
-                Bot.Delete(p.PlayerListMsg);
-                p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+                if (newturn) {
+                    Bot.Delete(p.PlayerListMsg);
+                    p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+                }
+                else
+                    p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, menu).Result;
             }
-            else if (p.PlayerListMsg == null)
-                p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
-            else if (p.PlayerListMsg != null && !newturn)
-                p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, menu).Result;
         }
 
         private InlineKeyboardMarkup GetPlayerMenu(Player p)
@@ -94,6 +96,8 @@ namespace BangGameBot
 
         private void Tell(string textforp, Player p, bool addextraspace, string textforothers = null)
         {
+            addextraspace = false; //this needs to be redone in the whole game. TODO
+
             if (addextraspace)
             {
                 textforp = "\n" + textforp;
@@ -133,11 +137,24 @@ namespace BangGameBot
         private void SendMessagesToSingle(Player p, IReplyMarkup menu = null)
         {
             if (!String.IsNullOrWhiteSpace(p.QueuedMsg) && (p.TurnMsg == null || (p.TurnMsg.Text + p.QueuedMsg).Length > 4000))
+            {
                 p.TurnMsg = Bot.Send(p.QueuedMsg, p.Id, menu).Result;
+                Console.WriteLine($"Sent {p.Name} the following queued message. Menu: " + (menu == null ? "no" : "yes") + Environment.NewLine + p.QueuedMsg);
+            }
             else if (p.TurnMsg != null && !String.IsNullOrWhiteSpace(p.QueuedMsg))
+            {
                 p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, menu).Result;
+                Console.WriteLine($"Edited {p.Name} with the following queued message. Menu: " + (menu == null ? "no" : "yes") + Environment.NewLine + p.QueuedMsg);
+            }
             else if (p.TurnMsg != null && menu != p.CurrentMenu)
+            {
                 Bot.EditMenu(menu, p.TurnMsg);
+                Console.WriteLine($"Edited {p.Name}'s menu.");
+            }
+            else
+            {
+                Console.WriteLine($"Did nothing to {p.Name}'s turn msg.");
+            }
             p.QueuedMsg = "\n";
             p.CurrentMenu = menu;
             return;
