@@ -6,14 +6,13 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace BangGameBot
 {
-    public partial class Game : IDisposable
+    public partial class Game
     {
         public readonly int MinPlayers = 4;
         public readonly int MaxPlayers = 7;
         public readonly string SheriffIndicator = " SHERIFF ";
         public int Id { get; } = 0;
-        private static List<bool> UsedCounter = new List<bool>();
-        private static object Lock = new object();
+        public static int NextId = 0;
         public GameStatus Status = GameStatus.Joining;
         public List<Player> Players = new List<Player>();
         public List<Player> DeadPlayers = new List<Player>();
@@ -21,44 +20,12 @@ namespace BangGameBot
         private int Turn = -1;
 
         public Game (Message msg) {
-            lock (Lock)
-            {
-                int nextIndex = GetAvailableIndex();
-                if (nextIndex == -1)
-                {
-                    nextIndex = UsedCounter.Count;
-                    UsedCounter.Add(true);
-                }
-
-                Id = nextIndex;
-            }
+            Id = NextId++;
 
             AddPlayer(msg.From);
             return;
         }
-
-        private int GetAvailableIndex()
-        {
-            for (int i = 0; i < UsedCounter.Count; i++)
-            {
-                if (UsedCounter[i] == false)
-                {
-                    return i;
-                }
-            }
-
-            // Nothing available.
-            return -1;
-        }
-
-        public void Dispose()
-        {
-            lock (Lock)
-            {
-                UsedCounter[Id] = false;
-            }
-        }
-
+        
         public void AddPlayer (User u) {
             Players.Add(new Player(u));
             UpdateJoinMessages(Players.Count() == MaxPlayers, true);
