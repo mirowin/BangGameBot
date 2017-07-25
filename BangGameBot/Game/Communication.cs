@@ -43,6 +43,14 @@ namespace BangGameBot
             return buttons;
         }
 
+        private void SendPlayerList(Player[] list)
+        {
+            foreach (var p in list)
+            {
+                SendPlayerList(false, p);
+            }
+        }
+
         private void SendPlayerList(bool newturn, Player p = null)
         {
             if (p == null)

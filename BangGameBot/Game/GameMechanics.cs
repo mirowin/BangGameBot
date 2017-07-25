@@ -320,8 +320,10 @@ namespace BangGameBot
                         Tell($"You put {cardchosen.GetDescription()} in play" + msg, curplayer, false, $"{curplayer.Name} put {cardchosen.GetDescription()} in play" + msg);
                         //TODO maybe inform players what this means.
                     }
-                    if (cardchosen.Name == CardName.Mustang || cardchosen.Name == CardName.Scope)
-                        SendPlayerList(false);
+                    if (cardchosen.Name == CardName.Mustang)
+                        SendPlayerList(Players.Where(x => x.Id != curplayer.Id).ToArray());
+                    if (cardchosen.Name == CardName.Scope)
+                        SendPlayerList(false, curplayer);
                     //SendMessages();
                     continue;
                 }
@@ -945,7 +947,8 @@ namespace BangGameBot
                 {
                     target.AddLives(1);
                     Discard(target, choice.CardChosen);
-                    Tell("You used a Beer, and regained one life point.", target, false, $"{target.Name} used a Beer, and regained one life point!");
+                    Tell($"You used {choice.CardChosen.GetDescription()}, and regained one life point.", target, false, $"{target.Name} used {choice.CardChosen.GetDescription()}, and regained one life point!");
+                    
                 }
                 else if (target.Character == Character.SidKetchum)
                 //this should ALWAYS be sid ketchum...
