@@ -101,7 +101,8 @@ namespace BangGameBot
                 {
                     //they are in a game, it's a game command
                     var game = Games.FirstOrDefault(x => x.Id == gameid);
-                    var player = game.Players.FirstOrDefault(x => x.Id == userid);
+                    var player = game?.Players.FirstOrDefault(x => x.Id == userid);
+                    if (player == null) return;
                     if (args[1] != "playerinfo")
                         Bot.SendAlert(q);
                     switch (args[1])
