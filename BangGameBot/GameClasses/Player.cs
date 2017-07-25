@@ -47,7 +47,7 @@ namespace BangGameBot
         {
             TelegramUser = u;
             Id = u.Id;
-            Name = (u.FirstName.Length < 10 ? u.FirstName : u.FirstName.Substring(0, 10) + "...").ToBold();
+            Name = (u.FirstName.Length < 10 ? u.FirstName : u.FirstName.Substring(0, 10) + "...").FormatHTML();
         }
 
         /// <summary>
