@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -25,7 +26,7 @@ namespace BangGameBot
                     Turn = 0;
                 var currentplayer = Players[Turn];
                 CheckDynamiteAndJail(currentplayer);
-                if (currentplayer.CardsOnTable.All(x => x.Name != CardName.Jail))
+                if (!currentplayer.CardsOnTable.Any(x => x.Name == CardName.Jail))
                 {
                     PhaseOne(currentplayer);
                     PhaseTwo(currentplayer);
@@ -246,15 +247,23 @@ namespace BangGameBot
                         menu.Add(new[] { new InlineKeyboardButton("Use ability", $"{Id}|bool|no") });
                 }
                 SendMessages(curplayer, menu.ToKeyboard());
+                Log($"Asking {curplayer.Name} to choose the card.\n");
 
                 //see what they chose
                 var choice = WaitForChoice(curplayer, 60);
-                if (choice == null) //afk
+                if (choice == null)
+                {   //afk
+                    Log($"{curplayer.Name}'s choice of the card to use was null.");
                     return;
-                if (choice.ChoseYes == true) //discard cards
+                }
+                if (choice.ChoseYes == true)
+                { //discard cards
+                    Log($"{curplayer.Name}'s choice of the card was yes. They should be now discarding.");
                     return;
+                }
                 if (choice.ChoseYes == false)
                 {
+                    Log($"{curplayer.Name}'s choice of the card was no. They should be Sid Ketchum discarding.");
                     if (curplayer.Character != Character.SidKetchum)
                         throw new Exception("Someone chose no during Phase Two...");
                     //it was sid ketchum! he wants to discard two cards and regain one life point.
@@ -282,6 +291,7 @@ namespace BangGameBot
                 {
                     if (cardchosen.Name == CardName.Jail)
                     {
+                        Log($"{curplayer.Name} is using Jail.");
                         var possiblechoices = Players.Where(x => x.Role != Role.Sheriff && !x.CardsOnTable.Any(c => c.Name == CardName.Jail) && x.Id != curplayer.Id);
                         Player chosenplayer;
                         if (possiblechoices.Count() == 1)
@@ -300,6 +310,8 @@ namespace BangGameBot
                     }
                     else
                     {
+
+                        Log($"{curplayer.Name} is using {cardchosen.Name.GetString<CardName>()}");
                         var discardweapon = Dealer.PutPermCardOnTable(curplayer, cardchosen);
                         var msg = "";
                         if (discardweapon != null)
@@ -329,6 +341,7 @@ namespace BangGameBot
                     case CardName.Beer:
                         if (Players.Count() == 2) 
                             throw new Exception("Someone is using a Beer in the final duel!");
+                        Log($"{curplayer.Name} is using a beer.");
                         curplayer.AddLives(1);
                         Tell($"You regained one life point.", curplayer, false, $"{curplayer.Name} regained one life point.");
                         SendPlayerList(false);
@@ -341,6 +354,7 @@ namespace BangGameBot
                         UseDuel(curplayer);
                         break;
                     case CardName.Gatling:
+                        Log($"{curplayer.Name} is using a gatling");
                         Tell(null, curplayer, true, $"{curplayer.Name} shot everyone!");
                         for (var i = Turn + 1; i != Turn; i = ++i % Players.Count())
                         {
@@ -353,6 +367,7 @@ namespace BangGameBot
                         }
                         break;
                     case CardName.GeneralStore:
+                        Log($"{curplayer.Name} is using general store");
                         var reshuffled = Dealer.PeekCards(Players.Count()).Item2;
                         TellEveryone(Dealer.PeekedCards.Aggregate($"{curplayer.Name} draws the following cards from the deck" + (reshuffled ? " reshuffling it" : " ") + ":\n", (s, c) => s + c.GetDescription() + "\n"), true);
                         SendMessages();
@@ -372,14 +387,17 @@ namespace BangGameBot
                         UseIndians(curplayer);
                         break;
                     case CardName.Saloon:
+                        Log($"{curplayer.Name} is using saloon");
                         foreach (var p in Players)
                             p.AddLives(1);
                         TellEveryone($"Everyone regained a life point.", false);
                         break;
                     case CardName.Stagecoach:
+                        Log($"{curplayer.Name} is using stagecoach");
                         DrawCards(curplayer, 2);
                         break;
                     case CardName.WellsFargo:
+                        Log($"{curplayer.Name} is using wellsfargo");
                         DrawCards(curplayer, 3);
                         break;
                 }
@@ -390,6 +408,7 @@ namespace BangGameBot
 
         private void UseDuel(Player curplayer)
         {
+            Log($"{curplayer.Name} is using a duel.");
             var possiblechoices = Players.Where(x => x.Id != curplayer.Id);
             Player target;
             if (possiblechoices.Count() == 1)
@@ -433,6 +452,7 @@ namespace BangGameBot
 
         private void UseIndians(Player curplayer)
         {
+            Log($"{curplayer.Name} is using indians");
             var candiscard = Players.Where(x => x.Id != curplayer.Id && (x.CardsInHand.Any(c => c.Name == CardName.Bang) || (x.Character == Character.CalamityJanet && x.CardsInHand.Any(c => c.Name == CardName.Missed))));
             foreach (var p in candiscard)
             {
@@ -472,6 +492,7 @@ namespace BangGameBot
 
         private void UseBang(Player attacker)
         {
+            Log($"{attacker.Name} is using bang.");
             attacker.UsedBang = true;
             var possiblechoices = Players.Where(x => x.IsReachableBy(attacker, Players));
             Player target;
@@ -634,6 +655,7 @@ namespace BangGameBot
 
         private void UsePanicOrCatBalou(Player curplayer, bool iscatbalou = false)
         {
+            Log($"{curplayer.Name} is using a panic, or a cat balou.");
             var jessejonesability = curplayer.Character == Character.JesseJones && Status == GameStatus.PhaseOne && !iscatbalou;
             if (!jessejonesability && Status != GameStatus.PhaseTwo)
                 throw new Exception("Someone is using Panic! / Cat Balou outside Phase Two...");
@@ -738,7 +760,7 @@ namespace BangGameBot
                     else
                         return player.Lives < player.MaxLives;
                 default:
-                    throw new NotImplementedException();
+                    throw new ArgumentException();
             }
         }
 

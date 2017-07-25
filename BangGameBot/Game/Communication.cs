@@ -106,13 +106,13 @@ namespace BangGameBot
             if (!String.IsNullOrWhiteSpace(textforp))
             {
                 p.QueuedMsg = p.QueuedMsg + textforp + "\n";
-                System.IO.File.AppendAllText("logs.txt", $"Told {p.Name} the following message:{p.QueuedMsg}");
+                Log($"Told {p.Name} the following message:{p.QueuedMsg}\n");
             }
             if (!String.IsNullOrWhiteSpace(textforothers))
                 foreach (var pl in Players.Where(x => x.Id != p.Id))
                 {
                     pl.QueuedMsg = pl.QueuedMsg + textforothers + "\n";
-                    System.IO.File.AppendAllText("logs.txt", $"Told {pl.Name} the following message:{pl.QueuedMsg}");
+                    Log($"Told {pl.Name} the following message:{pl.QueuedMsg}\n");
                 }
             return;
         }
@@ -145,21 +145,21 @@ namespace BangGameBot
             if (!String.IsNullOrWhiteSpace(p.QueuedMsg) && (p.TurnMsg == null || (p.TurnMsg.Text + p.QueuedMsg).Length > 4000))
             {
                 p.TurnMsg = Bot.Send(p.QueuedMsg, p.Id, menu).Result;
-                System.IO.File.AppendAllText("logs.txt", $"Sent {p.Name} the following queued message. Menu: " + (menu == null ? "no" : "yes") +  p.QueuedMsg);
+                Log($"Sent {p.Name} the following queued message. Menu: " + (menu == null ? "no" : "yes") +  p.QueuedMsg);
             }
             else if (p.TurnMsg != null && !String.IsNullOrWhiteSpace(p.QueuedMsg))
             {
                 p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, menu).Result;
-                System.IO.File.AppendAllText("logs.txt", $"Edited {p.Name} with the following queued message. Menu: " + (menu == null ? "no" : "yes") + p.QueuedMsg);
+                Log($"Edited {p.Name} with the following queued message. Menu: " + (menu == null ? "no" : "yes") + p.QueuedMsg);
             }
             else if (p.TurnMsg != null && menu != p.CurrentMenu)
             {
                 Bot.EditMenu(menu, p.TurnMsg);
-                System.IO.File.AppendAllText("logs.txt", $"Edited {p.Name}'s menu. " + (menu == null ? "(off)" : "(on)"));
+                Log($"Edited {p.Name}'s menu. " + (menu == null ? "(off)" : "(on)"));
             }
             else
             {
-                System.IO.File.AppendAllText("logs.txt", $"Did nothing to {p.Name}'s turn msg.");
+                Log($"Did nothing to {p.Name}'s turn msg.");
             }
             p.QueuedMsg = "\n";
             p.CurrentMenu = menu;
@@ -255,6 +255,11 @@ namespace BangGameBot
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private void Log(string text)
+        {
+            System.IO.File.AppendAllText("logs.txt", text + "\n");
         }
     }
 }
