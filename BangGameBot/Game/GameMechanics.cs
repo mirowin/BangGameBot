@@ -922,7 +922,7 @@ namespace BangGameBot
             if (target.Lives > 0)
                 throw new ArgumentException("Player is not lethally hit.");
             //check if they can be saved
-            while ((target.CardsInHand.Count(x => x.Name == CardName.Beer) > -target.Lives) || //they have enough beers
+            while ((target.CardsInHand.Count(x => x.Name == CardName.Beer) > -target.Lives && target.Lives < 1) || //they have enough beers
                 (target.Character == Character.SidKetchum && CanUseAbility(target, Situation.PlayerDying))) //they are sid ketchum and have enough cards / beers.
             {
                 List<InlineKeyboardButton[]> menu = null;
@@ -944,6 +944,7 @@ namespace BangGameBot
                 else if (choice.CardChosen.Name == CardName.Beer)
                 {
                     target.AddLives(1);
+                    Discard(target, choice.CardChosen);
                     Tell("You used a Beer, and regained one life point.", target, false, $"{target.Name} used a Beer, and regained one life point!");
                 }
                 else if (target.Character == Character.SidKetchum)
