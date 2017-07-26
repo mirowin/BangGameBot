@@ -150,7 +150,11 @@ namespace BangGameBot
 
         private void SendMessagesToSingle(Player p, IReplyMarkup menu = null)
         {
-            if (!String.IsNullOrWhiteSpace(p.QueuedMsg) && (p.TurnMsg == null || (p.TurnMsg.Text + p.QueuedMsg).Length > 4000))
+            if ((!String.IsNullOrWhiteSpace(p.QueuedMsg) || (p.TurnMsg != null && menu != p.CurrentMenu)) //we have to send. let's care about flood
+                && DateTime.UtcNow < p.LastMessage + TimeSpan.FromSeconds(0.5))
+                Task.Delay(500).Wait();
+
+            if (!String.IsNullOrWhiteSpace(p.QueuedMsg) && (p.TurnMsg == null || (p.TurnMsg.Text + p.QueuedMsg).Length > 2500))
             {
                 p.TurnMsg = Bot.Send(p.QueuedMsg, p.Id, menu).Result;
                 Log($"Sent {p.Name} the following queued message. Menu: " + (menu == null ? "no" : "yes") +  p.QueuedMsg);

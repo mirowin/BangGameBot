@@ -16,6 +16,7 @@ namespace BangGameBot
         public string CurrentMsg = "";
         public IReplyMarkup CurrentMenu = null;
         public string QueuedMsg = "";
+        public DateTime LastMessage = DateTime.MinValue;
         public bool VotedToStart = false;
         public bool UsedBang = false;
         public Choice Choice = null;
