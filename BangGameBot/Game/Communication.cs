@@ -152,7 +152,10 @@ namespace BangGameBot
         {
             if ((!String.IsNullOrWhiteSpace(p.QueuedMsg) || (p.TurnMsg != null && menu != p.CurrentMenu)) //we have to send. let's care about flood
                 && DateTime.UtcNow < p.LastMessage + TimeSpan.FromSeconds(0.5))
+            {
                 Task.Delay(500).Wait();
+                p.LastMessage = DateTime.UtcNow;
+            }
 
             if (!String.IsNullOrWhiteSpace(p.QueuedMsg) && (p.TurnMsg == null || (p.TurnMsg.Text + p.QueuedMsg).Length > 2500))
             {
