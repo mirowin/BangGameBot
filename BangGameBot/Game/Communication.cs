@@ -77,17 +77,17 @@ namespace BangGameBot
             var msg = p.QueuedMsg;
             if (msg.Blank)
                 return;
-            var helprows = new List<InlineKeyboardCallbackButton[]>();
             if (p.HelpMode)
-                helprows.AddRange(MakeHelpButtons(msg.CardsUsed, msg.Characters)); //TODO: This will be a mess! especially if those cards / characters are already in menu...
-            helprows.Add(new[]
+                msg.InsertHelpCommands();
+            if (menu == null)
+                menu = new List<InlineKeyboardCallbackButton[]>();
+            menu.Add(new[]
             {
                 new InlineKeyboardCallbackButton("Players", $"{Id}|players|new"),
                 new InlineKeyboardCallbackButton("Your cards", $"{Id}|mycards")
             });
-            menu.AddRange(helprows);
             if (p.CurrentMsg != null)
-                Bot.EditMenu(null, p.CurrentMsg); //TODO: actually, this is gonna delete help buttons too... big problem.
+                Bot.EditMenu(null, p.CurrentMsg);
             p.CurrentMsg = Bot.Send(msg.Text, p.Id, menu.ToKeyboard()).Result;
             msg.Clear();
         }
@@ -146,11 +146,10 @@ namespace BangGameBot
                     (choice.CardsInHand.Count().ToString())
                 ) + "\n" +
                 "Cards on table:\n" + string.Join(", ", choice.CardsOnTable.Select(x => x.GetDescription()));
-            var menu = new List<InlineKeyboardCallbackButton[]>();
             if (recipient.HelpMode)
-                menu.AddRange(MakeHelpButtons((choice.Id == recipient.Id ? choice.Cards : choice.CardsOnTable).Select(x => x.Name).ToList(), choice.Character.ToSinglet().ToList()));
-            menu.Add(new InlineKeyboardCallbackButton("🔙", $"{Id}|players|edit").ToSinglet());
-            Bot.Edit(text, q.Message, menu.ToKeyboard());
+                text += Helpers.MakeHelpString((choice.Id == recipient.Id ? choice.Cards : choice.CardsOnTable).Select(x => x.Name).ToList(), choice.Character.ToSinglet().ToList());
+
+            Bot.Edit(text, q.Message, new InlineKeyboardCallbackButton("🔙", $"{Id}|players|edit").ToSinglet().ToSinglet().ToKeyboard());
         }
 
         public void ShowMyCards(CallbackQuery q, Player p)
@@ -158,15 +157,8 @@ namespace BangGameBot
             Bot.SendAlert(q, "Cards in hand:\n" + string.Join(", ", p.CardsInHand.Select(x => x.GetDescription())) + "\n\nCards on table:\n" + string.Join(", ", p.CardsOnTable.Select(x => x.GetDescription())));
         }
 
-        private List<InlineKeyboardCallbackButton[]> MakeHelpButtons(List<CardName> cards, List<Character> chars)
-        {
-            var helpbuttons = new List<InlineKeyboardCallbackButton>();
-            foreach (var card in cards)
-                helpbuttons.Add(card.ToHelpButton($"{card.GetString<CardName>()}🃏"));
-            foreach (var ch in chars)
-                helpbuttons.Add(ch.ToHelpButton($"{ch.GetString<Character>()}👤"));
-            return helpbuttons.MakeTwoColumns();
-        }
+        
+
 
         private void UpdateJoinMessages(bool startinggame = false, bool addingplayer = false)
         {

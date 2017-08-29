@@ -91,6 +91,12 @@ namespace BangGameBot
                 CardsUsed.Clear();
                 Characters.Clear();
             }
+
+            public void InsertHelpCommands()
+            {
+                Text += Helpers.MakeHelpString(CardsUsed, Characters);
+            }
+
         };
 
 

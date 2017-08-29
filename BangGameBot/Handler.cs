@@ -30,8 +30,27 @@ namespace BangGameBot
                 //get the command
                 var text = msg.Text.Replace("@" + Bot.Me.Username, "").TrimStart('/', '!');
                 var cmd = text.Contains(' ') ? text.Substring(0, text.IndexOf(' ')) : text;
+                cmd.ToLower();
                 text = text.Replace(cmd, "").Trim();
-                switch (cmd.ToLower())
+
+                if (cmd.StartsWith("help_"))
+                {
+                    cmd = cmd.Replace("help_", "");
+                    if (Enum.TryParse(cmd, true, out CardName card))
+                    {
+                        var description = Helpers.Cards.FirstOrDefault(x => x.EnumVal == (int)card && x.CardType == typeof(CardName));
+                        Bot.Send(description.Name.ToBold() + "\n\n" + description.Description, chatid);
+                    }
+                    else if (Enum.TryParse(cmd, true, out Character character))
+                    {
+                        var description = Helpers.Cards.FirstOrDefault(x => x.EnumVal == (int)character && x.CardType == typeof(Character));
+                        Bot.Send(description.Name.ToBold() + "\n\n" + description.Description, chatid);
+                    }
+                    return;
+                }
+
+
+                switch (cmd)
                 {
                     case "start":
                         Bot.Send("Hello! I'm a test bot.", userid);
