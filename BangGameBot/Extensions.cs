@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.InlineKeyboardButtons;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace BangGameBot
@@ -27,7 +28,7 @@ namespace BangGameBot
             }
         }
 
-        public static Card ChooseCardFromHand(this Player p){
+        public static Card ChooseCardFromHand(this Player p) {
             return p.CardsInHand.Random();
         }
 
@@ -36,9 +37,9 @@ namespace BangGameBot
             var i = players.IndexOf(source);
             var j = players.IndexOf(target);
             //direct distance
-            var dist1 = Math.Abs(j-i);
+            var dist1 = Math.Abs(j - i);
             //cycling distance
-            var dist2 = players.Count()-Math.Max(i,j)+Math.Min(i,j);
+            var dist2 = players.Count() - Math.Max(i, j) + Math.Min(i, j);
             var distance = Math.Min(dist1, dist2);
             //account characters & cards!
             if (target.Character == Character.PaulRegret)
@@ -108,7 +109,7 @@ namespace BangGameBot
 
         public static string ToEmoji(this int i)
         {
-            var emojis = new [] { "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟" };
+            var emojis = new[] { "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟" };
             return emojis[i];
         }
 
@@ -171,7 +172,7 @@ namespace BangGameBot
         }
 
         public static T[] ToSinglet<T>(this T obj) {
-            return new [] { obj };
+            return new[] { obj };
         }
 
         /// <summary>
@@ -186,11 +187,11 @@ namespace BangGameBot
             return source.Skip(Math.Max(0, source.Count() - N));
         }
 
-        public static InlineKeyboardMarkup ToKeyboard(this IEnumerable<InlineKeyboardButton[]> buttons)
+        public static InlineKeyboardMarkup ToKeyboard(this IEnumerable<InlineKeyboardCallbackButton[]> buttons)
         {
             return new InlineKeyboardMarkup(buttons.ToArray());
         }
-        
+
 
         //thanks Para! :P
         public static int ComputeLevenshtein(this string s, string t)
@@ -229,6 +230,23 @@ namespace BangGameBot
             return d[n, m];
         }
 
+        //thanks Para for this too :)
+        public static List<InlineKeyboardCallbackButton[]> MakeTwoColumns(this List<InlineKeyboardCallbackButton> buttons)
+        {
+            var menu = new List<InlineKeyboardCallbackButton[]>();
+            for (var i = 0; i < buttons.Count; i++)
+            {
+                if (buttons.Count - 1 == i)
+                {
+                    menu.Add(new[] { buttons[i] });
+                }
+                else
+                    menu.Add(new[] { buttons[i], buttons[i + 1] });
+                i++;
+            }
+            return menu;
+        }
+
 
         public static bool IsHTMLEqualTo(this string html, string text)
         {
@@ -242,6 +260,16 @@ namespace BangGameBot
                 .Replace("&lt;", "<")
                 .Replace("&gt;", ">")
                 .Replace("&quot;", "\"");
+        }
+
+        public static InlineKeyboardCallbackButton ToHelpButton(this Character c, string text = "")
+        {
+            return new InlineKeyboardCallbackButton($"ℹ️{text}", $"help|character|{(int)c}");
+        }
+
+        public static InlineKeyboardCallbackButton ToHelpButton(this CardName c, string text = "")
+        {
+            return new InlineKeyboardCallbackButton($"ℹ️{text}", $"help|card|{(int)c}");
         }
 
         public static CardType GetCardType(this Card card)

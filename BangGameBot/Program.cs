@@ -93,7 +93,7 @@ namespace BangGameBot
 
 
     static class Bot {
-        public static TelegramBotClient Api = new TelegramBotClient(System.IO.File.ReadAllText(Program.TokenPath)) { Timeout = TimeSpan.FromSeconds(0.5) };
+        public static TelegramBotClient Api = new TelegramBotClient(System.IO.File.ReadAllText(Program.TokenPath)) { Timeout = TimeSpan.FromSeconds(30) };
         public static User Me = Api.GetMeAsync().Result;
 
         public static void StartReceiving()

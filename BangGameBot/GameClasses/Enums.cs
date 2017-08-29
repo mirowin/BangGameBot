@@ -3,6 +3,7 @@
 
     public enum CardName
     {
+        None,
         //Cards
         Bang, Missed, Beer, Panic, CatBalou, Stagecoach, WellsFargo, Gatling, Duel, Indians, GeneralStore, Saloon,
         //PermCards
@@ -18,6 +19,8 @@
 
     public enum Character
     {
+        None,
+
         PaulRegret, Jourdounnais, BlackJack, SlabTheKiller, ElGringo, JesseJones, SuzyLafayette, WillyTheKid, RoseDoolan, BartCassidy, PedroRamirez, SidKetchum, LuckyDuke, VultureSam, CalamityJanet, KitCarlson
     }
 

@@ -2,61 +2,102 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.InlineKeyboardButtons;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace BangGameBot
 {
     public partial class Game
     {
-        private InlineKeyboardMarkup MakeBoolMenu(string yes, string no)
+        
+        private List<InlineKeyboardCallbackButton[]> MakeBoolMenu(string yes, string no)
         {
-            var buttons = new List<InlineKeyboardButton>();
-            buttons.Add(new InlineKeyboardButton(yes, $"{Id}|bool|yes"));
-            buttons.Add(new InlineKeyboardButton(no, $"{Id}|bool|no"));
-            return new InlineKeyboardMarkup(buttons.ToArray());
+            return new List<InlineKeyboardCallbackButton[]>() {
+                new []
+                {
+                    new InlineKeyboardCallbackButton(yes, $"{Id}|bool|yes"),
+                    new InlineKeyboardCallbackButton(no, $"{Id}|bool|no")
+                }
+            };
         }
 
-        private List<InlineKeyboardButton[]> MakeCardsInHandMenu(Player p, Situation s)
+        private List<InlineKeyboardCallbackButton[]> MakeCardsInHandMenu(Player p, Situation s)
         {
-            var buttons = new List<InlineKeyboardButton[]>();
+            var rows = new List<InlineKeyboardCallbackButton[]>();
             foreach (var c in p.CardsInHand)
             {
                 var err = (int)CanUseCard(p, c, s);
-                buttons.Add(new InlineKeyboardButton(c.GetDescription(), err == 0 ? $"{Id}|card|{c.Encode()}" : ("err" + err)).ToSinglet());
+                var button = new InlineKeyboardCallbackButton(c.GetDescription(), err == 0 ? $"{Id}|card|{c.Encode()}" : ("err" + err));
+                rows.Add(p.HelpMode ? new[] { button, c.Name.ToHelpButton() } : button.ToSinglet());
             }
-            return buttons;
+            return rows;
         }
 
-        private List<InlineKeyboardButton[]> MakeMenuFromCards(IEnumerable<Card> list)
+        private List<InlineKeyboardCallbackButton[]> MakeMenuFromCards(IEnumerable<Card> list, Player recipient)
         {
-            var buttons = new List<InlineKeyboardButton[]>();
+            var rows = new List<InlineKeyboardCallbackButton[]>();
             foreach (var c in list)
-                buttons.Add(new InlineKeyboardButton(c.GetDescription(), $"{Id}|card|{c.Encode()}").ToSinglet());
-            return buttons;
-        }
-
-        public List<InlineKeyboardButton[]> AddYesButton(List<InlineKeyboardButton[]> buttons, string str)
-        {
-            buttons.Add(new[] { new InlineKeyboardButton(str, $"{Id}|bool|yes") });
-            return buttons;
-        }
-
-        private void SendPlayerList(Player[] list)
-        {
-            foreach (var p in list)
             {
-                SendPlayerList(false, p);
+                var button = new InlineKeyboardCallbackButton(c.GetDescription(), $"{Id}|card|{c.Encode()}");
+                rows.Add(recipient.HelpMode ? new[] { button, c.Name.ToHelpButton() } : button.ToSinglet());
             }
+            return rows;
         }
 
-        private void SendPlayerList(bool newturn, Player p = null)
+        public List<InlineKeyboardCallbackButton[]> AddYesButton(List<InlineKeyboardCallbackButton[]> buttons, string str)
+        {
+            buttons.Add(new[] { new InlineKeyboardCallbackButton(str, $"{Id}|bool|yes") });
+            return buttons;
+        }
+        
+        public void Tell(string text, Player p, CardName cardused = CardName.None, Character character = Character.None, string textforothers = null)
+        {
+            p.QueuedMsg.Text += "\n" + text;
+            if (character != Character.None && !p.QueuedMsg.Characters.Contains(character))
+                p.QueuedMsg.Characters.Add(character);
+            if (cardused != CardName.None && !p.QueuedMsg.CardsUsed.Contains(cardused))
+                p.QueuedMsg.CardsUsed.Add(cardused);
+            if (textforothers != null)
+                TellEveryone(textforothers, cardused, character, p.ToSinglet());
+            return;
+        }
+
+        public void TellEveryone(string text, CardName cardused = CardName.None, Character character = Character.None, IEnumerable<Player> except = null)
+        {
+            foreach (var p in Players.Except(except))
+            {
+                Tell(text, p, cardused, character);
+            }
+            return;
+        }
+
+        public void SendMessage(Player p, List<InlineKeyboardCallbackButton[]> menu = null)
+        {
+            var msg = p.QueuedMsg;
+            if (msg.Blank)
+                return;
+            var helprows = new List<InlineKeyboardCallbackButton[]>();
+            if (p.HelpMode)
+                helprows.AddRange(MakeHelpButtons(msg.CardsUsed, msg.Characters)); //TODO: This will be a mess! especially if those cards / characters are already in menu...
+            helprows.Add(new[]
+            {
+                new InlineKeyboardCallbackButton("Players", $"{Id}|players|new"),
+                new InlineKeyboardCallbackButton("Your cards", $"{Id}|mycards")
+            });
+            menu.AddRange(helprows);
+            if (p.CurrentMsg != null)
+                Bot.EditMenu(null, p.CurrentMsg); //TODO: actually, this is gonna delete help buttons too... big problem.
+            p.CurrentMsg = Bot.Send(msg.Text, p.Id, menu.ToKeyboard()).Result;
+            msg.Clear();
+        }
+
+        public void SendPlayerList(Player p = null, CallbackQuery q = null)
         {
             if (p == null)
             {
                 Players.ForEach(pl => {
-                    SendPlayerList(newturn, pl);
+                    SendPlayerList(pl);
                 });
                 return;
             }
@@ -70,130 +111,61 @@ namespace BangGameBot
                 (Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
             );
             var menu = GetPlayerMenu(p);
-            if (p.PlayerListMsg == null)
-                p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+            if (q == null)
+                Bot.Send(text, p.Id, menu);
             else
-            {
-                if (newturn) {
-                    Bot.Delete(p.PlayerListMsg);
-                    p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
-                }
-                else
-                    p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, menu).Result;
-            }
+                Bot.Edit(text, q.Message, menu);
         }
 
         private InlineKeyboardMarkup GetPlayerMenu(Player p)
         {
-            var result = new List<InlineKeyboardButton[]>();
-            result.AddRange(Players.Where(x => x.Id != p.Id).Select(x => new[] { new InlineKeyboardButton(x.Name, $"{Id}|playerinfo|{x.Id}") }));
-            result.Add(new[] {
-                new InlineKeyboardButton("Your cards", $"{Id}|playerinfo|{p.Id}"),
-                InlineKeyboardButton.WithSwitchInlineQueryCurrentChat("Help")
-            });
-            return result.ToKeyboard();
+            var rows = new List<InlineKeyboardCallbackButton[]>();
+            foreach (var pl in Players)
+            {
+                var button = new InlineKeyboardCallbackButton(pl.Name, $"{Id}|playerinfo|{pl.Id}");
+                rows.Add(p.HelpMode ? new[] { button, pl.Character.ToHelpButton($"{pl.Character.GetString<Character>()}") } : button.ToSinglet());
+            }
+            return rows.ToKeyboard();
         }
 
-        public void SendMessage(User u, string text)
+        public void SendMessages(Player menurecipient = null, IEnumerable<InlineKeyboardCallbackButton[]> menu = null)
         {
-            foreach (var player in Players)
-                if (player.Id != u.Id)
-                    Bot.Send(u.FirstName.ToBold() + ":\n" + text.FormatHTML(), player.Id);
-            return;
-        }
-
-        private void Tell(string textforp, Player p, bool addextraspace, string textforothers = null)
-        {
-            addextraspace = false; //this needs to be redone in the whole game. TODO
-
-            if (addextraspace)
-            {
-                textforp = "\n" + textforp;
-                textforothers = "\n" + textforothers;
-            }
-            if (!String.IsNullOrWhiteSpace(textforp))
-            {
-                p.QueuedMsg = p.QueuedMsg + textforp + "\n";
-                Log($"Told {p.Name} the following message:{p.QueuedMsg}\n");
-            }
-            if (!String.IsNullOrWhiteSpace(textforothers))
-                foreach (var pl in Players.Where(x => x.Id != p.Id))
-                {
-                    pl.QueuedMsg = pl.QueuedMsg + textforothers + "\n";
-                    Log($"Told {pl.Name} the following message:{pl.QueuedMsg}\n");
-                }
-            return;
-        }
-
-        private void TellEveryone(string text, bool addextraspace = true, Player[] except = null)
-        {
-            foreach (var p in Players.Where(x => !except?.Contains(x) ?? true))
-                Tell(text, p, addextraspace, null);
-            return;
-        }
-
-        private void SendMessages (Player[] menurecipients = null, IReplyMarkup menu = null)
-        {
-            menurecipients = menurecipients ?? Players.ToArray();
-            foreach (var p in menurecipients)
-                SendMessagesToSingle(p, menu);
-            foreach (var p in Players.Where(x => !menurecipients.Contains(x)))
-                SendMessagesToSingle(p, null);
-            return;
-        }
-        
-        private void SendMessages(Player menurecipient, IReplyMarkup menu = null)
-        {
-            SendMessages(menurecipient.ToSinglet(), menu);
-            return;
-        }
-
-        private void SendMessagesToSingle(Player p, IReplyMarkup menu = null)
-        {
-            if ((!String.IsNullOrWhiteSpace(p.QueuedMsg) || (p.TurnMsg != null && menu != p.CurrentMenu)) //we have to send. let's care about flood
-                && DateTime.UtcNow < p.LastMessage + TimeSpan.FromSeconds(0.5))
-            {
-                Task.Delay(500).Wait();
-                p.LastMessage = DateTime.UtcNow;
-            }
-
-            if (!String.IsNullOrWhiteSpace(p.QueuedMsg) && (p.TurnMsg == null || (p.TurnMsg.Text + p.QueuedMsg).Length > 2500))
-            {
-                p.TurnMsg = Bot.Send(p.QueuedMsg, p.Id, menu).Result;
-                Log($"Sent {p.Name} the following queued message. Menu: " + (menu == null ? "no" : "yes") +  p.QueuedMsg);
-            }
-            else if (p.TurnMsg != null && !String.IsNullOrWhiteSpace(p.QueuedMsg))
-            {
-                p.TurnMsg = Bot.Edit(p.TurnMsg.Text + p.QueuedMsg, p.TurnMsg, menu).Result;
-                Log($"Edited {p.Name} with the following queued message. Menu: " + (menu == null ? "no" : "yes") + p.QueuedMsg);
-            }
-            else if (p.TurnMsg != null && menu != p.CurrentMenu)
-            {
-                Bot.EditMenu(menu, p.TurnMsg);
-                Log($"Edited {p.Name}'s menu. " + (menu == null ? "(off)" : "(on)"));
-            }
-            else
-            {
-                Log($"Did nothing to {p.Name}'s turn msg.");
-            }
-            p.QueuedMsg = "\n";
-            p.CurrentMenu = menu;
-            return;
+            foreach (var p in Players)
+                SendMessage(p, p.Id == menurecipient.Id ? menu.ToList() : null);
         }
 
         public void SendPlayerInfo(CallbackQuery q, Player choice, Player recipient)
         {
             var text = "";
-            text = choice.Name + "\n" +
+            text = choice.Name.ToBold() + "\n\n" +
                 "CHARACTER: " + choice.Character.GetString<Character>() + "\n" +
                 "ROLE: " + (choice.Role == Role.Sheriff ? " Sheriff" : (choice.Id == recipient.Id ? choice.Role.GetString<Role>() : "Unknown")) + "\n" +
                 "LIFE POINTS: " + choice.LivesString() + "\n\n" +
-                "Cards in hand: " + (choice.Id == recipient.Id ? 
+                "Cards in hand: " + (choice.Id == recipient.Id ?
                     ("\n" + string.Join(", ", recipient.CardsInHand.Select(x => x.GetDescription())) + "\n") :
                     (choice.CardsInHand.Count().ToString())
                 ) + "\n" +
                 "Cards on table:\n" + string.Join(", ", choice.CardsOnTable.Select(x => x.GetDescription()));
-            Bot.SendAlert(q, text);
+            var menu = new List<InlineKeyboardCallbackButton[]>();
+            if (recipient.HelpMode)
+                menu.AddRange(MakeHelpButtons((choice.Id == recipient.Id ? choice.Cards : choice.CardsOnTable).Select(x => x.Name).ToList(), choice.Character.ToSinglet().ToList()));
+            menu.Add(new InlineKeyboardCallbackButton("🔙", $"{Id}|players|edit").ToSinglet());
+            Bot.Edit(text, q.Message, menu.ToKeyboard());
+        }
+
+        public void ShowMyCards(CallbackQuery q, Player p)
+        {
+            Bot.SendAlert(q, "Cards in hand:\n" + string.Join(", ", p.CardsInHand.Select(x => x.GetDescription())) + "\n\nCards on table:\n" + string.Join(", ", p.CardsOnTable.Select(x => x.GetDescription())));
+        }
+
+        private List<InlineKeyboardCallbackButton[]> MakeHelpButtons(List<CardName> cards, List<Character> chars)
+        {
+            var helpbuttons = new List<InlineKeyboardCallbackButton>();
+            foreach (var card in cards)
+                helpbuttons.Add(card.ToHelpButton($"{card.GetString<CardName>()}🃏"));
+            foreach (var ch in chars)
+                helpbuttons.Add(ch.ToHelpButton($"{ch.GetString<Character>()}👤"));
+            return helpbuttons.MakeTwoColumns();
         }
 
         private void UpdateJoinMessages(bool startinggame = false, bool addingplayer = false)
@@ -212,10 +184,9 @@ namespace BangGameBot
                 text += startinggame ? "\n\nShuffling the deck and assigning roles and characters..." : "";
 
                 //menu
-                var buttons = new List<InlineKeyboardButton>();
-                buttons.Add(new InlineKeyboardButton("Leave", $"{Id}|leave"));
+                var buttons = new List<InlineKeyboardCallbackButton> { new InlineKeyboardCallbackButton("Leave", $"{Id}|leave") };
                 if (Players.Count() >= MinPlayers)
-                    buttons.Add(new InlineKeyboardButton(p.VotedToStart ? "Unvote" : "Start", $"{Id}|start"));
+                    buttons.Add(new InlineKeyboardCallbackButton(p.VotedToStart ? "Unvote" : "Start", $"{Id}|start"));
                 var menu = new InlineKeyboardMarkup(buttons.ToArray());
 
                 if (p.PlayerListMsg == null)
@@ -270,11 +241,6 @@ namespace BangGameBot
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-        }
-
-        private void Log(string text)
-        {
-            System.IO.File.AppendAllText("logs.txt", text + "\n");
         }
     }
 }
