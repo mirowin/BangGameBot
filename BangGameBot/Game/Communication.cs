@@ -74,23 +74,30 @@ namespace BangGameBot
 
         public void SendMessage(Player p, List<InlineKeyboardCallbackButton[]> menu = null)
         {
-            var msg = p.QueuedMsg;
-            if (msg.Blank)
-                return;
-            if (p.HelpMode)
-                msg.InsertHelpCommands();
-            if (menu == null)
-                menu = new List<InlineKeyboardCallbackButton[]>();
-            menu.Add(new[]
+            try
             {
+                var msg = p.QueuedMsg;
+                if (msg.Blank)
+                    return;
+                if (p.HelpMode)
+                    msg.InsertHelpCommands();
+                if (menu == null)
+                    menu = new List<InlineKeyboardCallbackButton[]>();
+                menu.Add(new[]
+                {
                 new InlineKeyboardCallbackButton("Players", $"game|players|new"),
                 new InlineKeyboardCallbackButton("Your cards", $"game|mycards")
             });
-            if (p.CurrentMsg != null)
-                Bot.EditMenu(null, p.CurrentMsg).Wait();
-            
-            p.CurrentMsg = Bot.Send(msg.Text, p.Id, menu.ToKeyboard()).Result;
-            msg.Clear();
+                if (p.CurrentMsg != null)
+                    Bot.EditMenu(null, p.CurrentMsg).Wait();
+
+                p.CurrentMsg = Bot.Send(msg.Text, p.Id, menu.ToKeyboard()).Result;
+                msg.Clear();
+            }
+            catch (Exception e)
+            {
+                Program.LogError(e);
+            }
         }
 
         public void SendPlayerList(Player p = null, CallbackQuery q = null)

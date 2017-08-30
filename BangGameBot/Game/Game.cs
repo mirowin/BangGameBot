@@ -31,14 +31,8 @@ namespace BangGameBot
         }
 
         public void PlayerLeave (Player p) {
-            try
-            {
-                Bot.Edit("You have been removed from the game.", p.PlayerListMsg).Wait();
-            }
-            catch
-            {
-                // ignored
-            }
+            
+            Bot.Edit("You have been removed from the game.", p.PlayerListMsg).Wait();
             Players.Remove(p);
             if (Players.Count() == 0) {
                 Handler.Games.Remove(this);
