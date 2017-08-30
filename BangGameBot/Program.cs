@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -39,7 +40,7 @@ namespace BangGameBot
         {
             if (!Bot.Api.IsReceiving)
                 Bot.StartReceiving();
-            //LogError(e.Exception);
+            LogError(e.Exception);
             return;
         }
 
@@ -64,7 +65,7 @@ namespace BangGameBot
 
         static void Bot_OnMessage (object sender, Telegram.Bot.Args.MessageEventArgs e)
         {
-            if (e.Message?.Date == null || e.Message.Date < Program.StartTime.AddSeconds (-5))
+            if (e.Message?.Date == null || e.Message.Date < StartTime.AddSeconds (-5))
                 return;
             new Task(() => { Handler.HandleMessage(e.Message); }).Start();
             return;
@@ -72,8 +73,6 @@ namespace BangGameBot
 
         public static void LogError (Exception e)
         {
-            if ((e is ApiRequestException && e.Message == "Request timed out") || (e is TaskCanceledException && e.Message == "Un'attività è stata annullata."))
-                return;
             var msg = "";
             do {
                 msg = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") + " - " + e.GetType().ToString() + " " + e.Source +
@@ -93,7 +92,7 @@ namespace BangGameBot
 
 
     static class Bot {
-        public static TelegramBotClient Api = new TelegramBotClient(System.IO.File.ReadAllText(Program.TokenPath)) { Timeout = TimeSpan.FromSeconds(30) };
+        public static TelegramBotClient Api = new TelegramBotClient(System.IO.File.ReadAllText(Program.TokenPath)) { Timeout = TimeSpan.FromSeconds(15) };
         public static User Me = Api.GetMeAsync().Result;
 
         public static void StartReceiving()
@@ -101,10 +100,11 @@ namespace BangGameBot
             Api.StartReceiving();
         }
 
-        public static Task<Message> Send(string text, long chatid, IReplyMarkup replyMarkup = null, ParseMode parseMode = ParseMode.Html, int replyToMessageId = 0) {
+        public static Task<Message> Send(string text, long chatid, IReplyMarkup replyMarkup = null, ParseMode parseMode = ParseMode.Html, int replyToMessageId = 0)
+        {
             return Api.SendTextMessageAsync(chatid, text, parseMode, true, false, replyToMessageId, replyMarkup);
         }
-
+        
         public static Task<Message> Edit(string newtext, Message msg, IReplyMarkup replyMarkup = null, ParseMode parseMode = ParseMode.Html, int replyToMessageId = 0) {
             return Api.EditMessageTextAsync(msg.Chat.Id, msg.MessageId, newtext, parseMode, true, replyMarkup);
         }

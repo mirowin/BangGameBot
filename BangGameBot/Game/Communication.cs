@@ -16,8 +16,8 @@ namespace BangGameBot
             return new List<InlineKeyboardCallbackButton[]>() {
                 new []
                 {
-                    new InlineKeyboardCallbackButton(yes, $"{Id}|bool|yes"),
-                    new InlineKeyboardCallbackButton(no, $"{Id}|bool|no")
+                    new InlineKeyboardCallbackButton(yes, $"game|bool|yes"),
+                    new InlineKeyboardCallbackButton(no, $"game|bool|no")
                 }
             };
         }
@@ -28,7 +28,7 @@ namespace BangGameBot
             foreach (var c in p.CardsInHand)
             {
                 var err = (int)CanUseCard(p, c, s);
-                var button = new InlineKeyboardCallbackButton(c.GetDescription(), err == 0 ? $"{Id}|card|{c.Encode()}" : ("err" + err));
+                var button = new InlineKeyboardCallbackButton(c.GetDescription(), err == 0 ? $"game|card|{c.Encode()}" : ("err" + err));
                 rows.Add(p.HelpMode ? new[] { button, c.Name.ToHelpButton() } : button.ToSinglet());
             }
             return rows;
@@ -39,7 +39,7 @@ namespace BangGameBot
             var rows = new List<InlineKeyboardCallbackButton[]>();
             foreach (var c in list)
             {
-                var button = new InlineKeyboardCallbackButton(c.GetDescription(), $"{Id}|card|{c.Encode()}");
+                var button = new InlineKeyboardCallbackButton(c.GetDescription(), $"game|card|{c.Encode()}");
                 rows.Add(recipient.HelpMode ? new[] { button, c.Name.ToHelpButton() } : button.ToSinglet());
             }
             return rows;
@@ -47,7 +47,7 @@ namespace BangGameBot
 
         public List<InlineKeyboardCallbackButton[]> AddYesButton(List<InlineKeyboardCallbackButton[]> buttons, string str)
         {
-            buttons.Add(new[] { new InlineKeyboardCallbackButton(str, $"{Id}|bool|yes") });
+            buttons.Add(new[] { new InlineKeyboardCallbackButton(str, $"game|bool|yes") });
             return buttons;
         }
         
@@ -83,11 +83,12 @@ namespace BangGameBot
                 menu = new List<InlineKeyboardCallbackButton[]>();
             menu.Add(new[]
             {
-                new InlineKeyboardCallbackButton("Players", $"{Id}|players|new"),
-                new InlineKeyboardCallbackButton("Your cards", $"{Id}|mycards")
+                new InlineKeyboardCallbackButton("Players", $"game|players|new"),
+                new InlineKeyboardCallbackButton("Your cards", $"game|mycards")
             });
             if (p.CurrentMsg != null)
-                Bot.EditMenu(null, p.CurrentMsg);
+                Bot.EditMenu(null, p.CurrentMsg).Wait();
+            
             p.CurrentMsg = Bot.Send(msg.Text, p.Id, menu.ToKeyboard()).Result;
             msg.Clear();
         }
@@ -111,27 +112,28 @@ namespace BangGameBot
                 (Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
             );
             var menu = GetPlayerMenu(p);
+            menu.Add(new[] { new InlineKeyboardCallbackButton("❌Delete this message", "delete") });
             if (q == null)
-                Bot.Send(text, p.Id, menu);
+                Bot.Send(text, p.Id, menu.ToKeyboard()).Wait();
             else
-                Bot.Edit(text, q.Message, menu);
+                Bot.Edit(text, q.Message, menu.ToKeyboard()).Wait();
         }
 
-        private InlineKeyboardMarkup GetPlayerMenu(Player p)
+        private List<InlineKeyboardCallbackButton[]> GetPlayerMenu(Player p)
         {
             var rows = new List<InlineKeyboardCallbackButton[]>();
             foreach (var pl in Players)
             {
-                var button = new InlineKeyboardCallbackButton(pl.Name, $"{Id}|playerinfo|{pl.Id}");
+                var button = new InlineKeyboardCallbackButton(pl.Name, $"game|playerinfo|{pl.Id}");
                 rows.Add(p.HelpMode ? new[] { button, pl.Character.ToHelpButton($"{pl.Character.GetString<Character>()}") } : button.ToSinglet());
             }
-            return rows.ToKeyboard();
+            return rows;
         }
 
         public void SendMessages(Player menurecipient = null, IEnumerable<InlineKeyboardCallbackButton[]> menu = null)
         {
             foreach (var p in Players)
-                SendMessage(p, p.Id == menurecipient.Id ? menu.ToList() : null);
+                SendMessage(p, p.Id == (menurecipient?.Id ?? 0) ? menu.ToList() : null);
         }
 
         public void SendPlayerInfo(CallbackQuery q, Player choice, Player recipient)
@@ -149,7 +151,7 @@ namespace BangGameBot
             if (recipient.HelpMode)
                 text += Helpers.MakeHelpString((choice.Id == recipient.Id ? choice.Cards : choice.CardsOnTable).Select(x => x.Name).ToList(), choice.Character.ToSinglet().ToList());
 
-            Bot.Edit(text, q.Message, new InlineKeyboardCallbackButton("🔙", $"{Id}|players|edit").ToSinglet().ToSinglet().ToKeyboard());
+            Bot.Edit(text, q.Message, new[] { new InlineKeyboardCallbackButton("🔙 All the players", $"game|players|edit"),  new InlineKeyboardCallbackButton("❌Delete this message", "delete") }.ToSinglet().ToKeyboard());
         }
 
         public void ShowMyCards(CallbackQuery q, Player p)
@@ -176,16 +178,16 @@ namespace BangGameBot
                 text += startinggame ? "\n\nShuffling the deck and assigning roles and characters..." : "";
 
                 //menu
-                var buttons = new List<InlineKeyboardCallbackButton> { new InlineKeyboardCallbackButton("Leave", $"{Id}|leave") };
+                var buttons = new List<InlineKeyboardCallbackButton> { new InlineKeyboardCallbackButton("Leave", $"game|leave") };
                 if (Players.Count() >= MinPlayers)
-                    buttons.Add(new InlineKeyboardCallbackButton(p.VotedToStart ? "Unvote" : "Start", $"{Id}|start"));
+                    buttons.Add(new InlineKeyboardCallbackButton(p.VotedToStart ? "Unvote" : "Start", $"game|start"));
                 var menu = new InlineKeyboardMarkup(buttons.ToArray());
 
                 if (p.PlayerListMsg == null)
                     p.PlayerListMsg = Bot.Send(text, p.Id, startinggame ? null : menu).Result;
                 else if (addingplayer)
                 {
-                    Bot.Delete(p.PlayerListMsg);
+                    Bot.Delete(p.PlayerListMsg).Wait();
                     p.PlayerListMsg = Bot.Send(text, p.Id, startinggame ? null : menu).Result;
                 }
                 else

@@ -11,8 +11,6 @@ namespace BangGameBot
         public readonly int MinPlayers = 4;
         public readonly int MaxPlayers = 7;
         public readonly string SheriffIndicator = " SHERIFF ";
-        public int Id { get; } = 0;
-        public static int NextId = 0;
         public GameStatus Status = GameStatus.Joining;
         public List<Player> Players = new List<Player>();
         public List<Player> DeadPlayers = new List<Player>();
@@ -20,8 +18,6 @@ namespace BangGameBot
         private int Turn = -1;
 
         public Game (Message msg) {
-            Id = NextId++;
-
             AddPlayer(msg.From);
             return;
         }
@@ -35,8 +31,15 @@ namespace BangGameBot
         }
 
         public void PlayerLeave (Player p) {
+            try
+            {
+                Bot.Edit("You have been removed from the game.", p.PlayerListMsg).Wait();
+            }
+            catch
+            {
+                // ignored
+            }
             Players.Remove(p);
-            Bot.Edit("You have been removed from the game.", p.PlayerListMsg);
             if (Players.Count() == 0) {
                 Handler.Games.Remove(this);
                 Players?.Clear();

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InlineKeyboardButtons;
 
 namespace BangGameBot
 {
@@ -48,7 +49,6 @@ namespace BangGameBot
                     }
                     return;
                 }
-
 
                 switch (cmd)
                 {
@@ -98,6 +98,24 @@ namespace BangGameBot
                             Bot.Send("Help mode turned " + (playersettings.HelpMode ? "on" : "off"), chatid);
                         }
                         return;
+                    case "edit":
+                        if (String.IsNullOrWhiteSpace(text) || msg.ReplyToMessage == null || msg.ReplyToMessage.From.Id != Bot.Me.Id)
+                            return;
+                        var ts = DateTime.UtcNow - msg.Date;
+                        var start = DateTime.UtcNow;
+                        text += $"\n\nTime to receive command: {ts:mm\\:ss\\.ff}";
+                        Bot.Edit(text, msg.ReplyToMessage).Wait();
+                        ts = DateTime.UtcNow - start;
+                        Bot.Edit(text.ToBold() + "\n\nYou have been added to a game.\n\n" + "Players:".ToBold() + "\nRenatone" + $"\nTime to edit msg: {ts:mm\\:ss\\.ff}", msg.ReplyToMessage).Wait();
+                        return;
+                    case "ping":
+                        var tsp = DateTime.UtcNow - msg.Date;
+                        var startp = DateTime.UtcNow;
+                        text += $"\n\nTime to receive command: {tsp:mm\\:ss\\.ff}";
+                        var result = Bot.Send(text, chatid).Result;
+                        tsp = DateTime.UtcNow - startp;
+                        Bot.Edit(text.ToBold() + "\n\nYou have been added to a game.\n\n" + "Players:".ToBold() + "\nRenatone" + $"\nTime to send msg: {tsp:mm\\:ss\\.ff}", result, new InlineKeyboardCallbackButton("Edit", "edit").ToSinglet().ToSinglet().ToKeyboard()).Wait();
+                        return;
                     default:
                         return;
                 }
@@ -131,35 +149,40 @@ namespace BangGameBot
                 var chatid = q.Message.Chat.Id;
                 var userid = q.From.Id;
                 var args = q.Data.Split('|');
-                if (int.TryParse(args[0], out int gameid) && args.Length >= 2)
+                if (args[0] == "game" && args.Length >= 2)
                 {
                     //they are in a game, it's a game command
-                    var game = Games.FirstOrDefault(x => x.Id == gameid);
+                    var game = Games.FirstOrDefault(x => x.Players.Any(p => p.Id == userid));
                     var player = game?.Players.FirstOrDefault(x => x.Id == userid);
-                    if (player == null) return;
-                    if (!new[] { "mycards" }.Contains(args[1]))
-                        Bot.SendAlert(q);
+                    if (player == null)
+                    {
+                        //remove the buttons and ignore.
+                        Bot.EditMenu(null, q.Message);
+                        return;
+                    }
                     switch (args[1])
                     {
                         case "start":
                             game.VoteStart(player);
-                            return;
+                            break;
                         case "leave":
                             game.PlayerLeave(player);
-                            return;
+                            break;
                         case "players":
                             game.SendPlayerList(player, args[2] == "new" ? null : q);
-                            return;
+                            break;
                         case "playerinfo":
                             game.SendPlayerInfo(q, game.Players.FirstOrDefault(x => x.Id == long.Parse(args[2])), player);
-                            return;
+                            break;
                         case "mycards":
                             game.ShowMyCards(q, player);
-                            return;
+                            return; //this must not send the alert
                         default:
                             game.HandleChoice(player, args.Skip(1).ToArray(), q);
-                            return;
+                            break;
                     }
+                    Bot.SendAlert(q);
+                    return;
                 }
 
                 //not a game command
@@ -170,6 +193,9 @@ namespace BangGameBot
                         var card = Helpers.Cards.FirstOrDefault(x => x.CardType == (character ? typeof(Character) : typeof(CardName)) && x.EnumVal == int.Parse(args[2]));
                         Bot.SendAlert(q, card.Name + "\n" + card.Description);
                         break;
+                    case "delete":
+                        Bot.Delete(q.Message);
+                        return;
                 }
             }
 #if !DEBUG

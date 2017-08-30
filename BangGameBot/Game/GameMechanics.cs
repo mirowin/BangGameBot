@@ -96,7 +96,7 @@ namespace BangGameBot
         private void AssignCharacters()
         {
             var charsToAssign = new List<Character>();
-            charsToAssign.AddRange(Enum.GetValues(typeof(Character)).Cast<Character>().ToList());
+            charsToAssign.AddRange(Enum.GetValues(typeof(Character)).Cast<Character>().Where(x => x != Character.None).ToList());
             
             foreach (var p in Players)
             {
@@ -242,7 +242,7 @@ namespace BangGameBot
                         firsttime = false;
                     }
                     if (CanUseAbility(curplayer))
-                        menu.Add(new[] { new InlineKeyboardCallbackButton("Use ability", $"{Id}|bool|no") });
+                        menu.Add(new[] { new InlineKeyboardCallbackButton("Use ability", $"game|bool|no") });
                 }
                 SendMessages(curplayer, menu);
 
@@ -292,7 +292,7 @@ namespace BangGameBot
                         else
                         {
                             Tell($"Choose a player to put in jail.", curplayer, CardName.Jail);
-                            SendMessages(curplayer, possiblechoices.Select(x => new[] { new InlineKeyboardCallbackButton(x.Name, $"{Id}|player|{x.Id}") }));
+                            SendMessages(curplayer, possiblechoices.Select(x => new[] { new InlineKeyboardCallbackButton(x.Name, $"game|player|{x.Id}") }));
                             chosenplayer = WaitForChoice(curplayer, 30)?.PlayerChosen ?? possiblechoices.Random();
                         }
                         chosenplayer.StealFrom(curplayer, cardchosen);
@@ -397,7 +397,7 @@ namespace BangGameBot
             else
             {
                 Tell("Choose a player to challenge to duel.", curplayer, CardName.Duel);
-                SendMessages(curplayer, possiblechoices.Select(x => (new[] { new InlineKeyboardCallbackButton(x.Name, $"{Id}|player|{x.Id}") })));
+                SendMessages(curplayer, possiblechoices.Select(x => (new[] { new InlineKeyboardCallbackButton(x.Name, $"game|player|{x.Id}") })));
                 target = WaitForChoice(curplayer, 30)?.PlayerChosen ?? DefaultChoice.ChoosePlayer(possiblechoices);
                 Tell($"You chose to challenge {target.Name} to duel.", curplayer, CardName.Duel);
             }
@@ -480,7 +480,7 @@ namespace BangGameBot
             else
             {
                 Tell("Choose a player to shoot.", attacker);
-                SendMessages(attacker, possiblechoices.Select(x => (new[] { new InlineKeyboardCallbackButton(x.Name, $"{Id}|player|{x.Id}") })));
+                SendMessages(attacker, possiblechoices.Select(x => (new[] { new InlineKeyboardCallbackButton(x.Name, $"game|player|{x.Id}") })));
                 target = WaitForChoice(attacker, 30)?.PlayerChosen ?? DefaultChoice.ChoosePlayer(possiblechoices);
                 Tell($"You chose to shoot {target.Name}.", attacker);
             }
@@ -659,7 +659,7 @@ namespace BangGameBot
                 //make the menu and send
                 var buttonslist = new List<InlineKeyboardCallbackButton[]>();
                 foreach (var p in possiblechoices)
-                    buttonslist.Add(new[] { new InlineKeyboardCallbackButton(p.Name + $"({p.CardsInHand.Count()})", $"{Id}|player|{p.Id}") });
+                    buttonslist.Add(new[] { new InlineKeyboardCallbackButton(p.Name + $"({p.CardsInHand.Count()})", $"game|player|{p.Id}") });
                 SendMessages(curplayer, buttonslist);
 
                 playerchosen = WaitForChoice(curplayer, 30)?.PlayerChosen ?? DefaultChoice.ChoosePlayer(possiblechoices);
@@ -890,7 +890,6 @@ namespace BangGameBot
                         break;
                 }
             }
-            SendPlayerList();
             SendMessages();
             return;
         }
