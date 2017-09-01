@@ -818,6 +818,8 @@ namespace BangGameBot
                 }
                 Tell(msgforp + ".", p, textforothers: msgforothers + ".");
             }
+            foreach (var card in listofcards.Select(x => x.Name))
+                Tell("", p, card);
             return listofcards;
         }
 
