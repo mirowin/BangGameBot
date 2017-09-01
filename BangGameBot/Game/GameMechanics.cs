@@ -462,7 +462,7 @@ namespace BangGameBot
                 Discard(p, p.Choice.CardChosen);
                 Tell($"You discarded {p.Choice.CardChosen.GetDescription()}.", p, p.Choice.CardChosen.Name, textforothers: $"{p.Name} discarded {p.Choice.CardChosen.GetDescription()}");
             }
-            foreach (var p in Players.Where(x => !missedplayers.Contains(x) && x.Id != curplayer.Id))
+            foreach (var p in Players.Except(missedplayers).Except(curplayer.ToSinglet()))
             {
                 HitPlayer(p, 1, curplayer);
                 if (Status == GameStatus.Ending) return;
