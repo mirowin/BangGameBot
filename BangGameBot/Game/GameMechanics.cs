@@ -1000,8 +1000,10 @@ namespace BangGameBot
             {
                 Status = GameStatus.Ending;
                 SendMessages();
-                foreach (var p in Players)
+                foreach (var p in Players.Union(DeadPlayers))
                     Bot.Send(finalmsg, p.Id);
+                Players.Clear();
+                DeadPlayers.Clear();
             }
 
             return;

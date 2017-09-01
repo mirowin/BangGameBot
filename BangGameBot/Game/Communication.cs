@@ -65,10 +65,8 @@ namespace BangGameBot
 
         public void TellEveryone(string text, CardName cardused = CardName.None, Character character = Character.None, IEnumerable<Player> except = null)
         {
-            foreach (var p in Players.Except(except))
-            {
+            foreach (var p in Players.Union(DeadPlayers).Except(except))
                 Tell(text, p, cardused, character);
-            }
             return;
         }
 
@@ -100,30 +98,37 @@ namespace BangGameBot
             }
         }
 
-        public void SendPlayerList(Player p = null, CallbackQuery q = null)
+        public void SendPlayerList()
         {
-            if (p == null)
+            for (var i = 1; i < Players.Count() + 1; i++)
+                SendPlayerList(Players[(Turn + i) % Players.Count()]);
+            return;
+        }
+
+        public void SendPlayerList(Player p, CallbackQuery q = null)
+        {
+            try
             {
-                Players.ForEach(pl => {
-                    SendPlayerList(pl);
-                });
-                return;
+                var text = "Players".ToBold() + ":\n";
+                text += Players.Aggregate("", (s, pl) =>
+                    s +
+                    p.DistanceSeen(pl, Players).ToEmoji() +
+                    pl.Name + " - " + pl.Character.GetString<Character>() +
+                    (pl.Role == Role.Sheriff ? SheriffIndicator : "") +
+                    pl.LivesString() +
+                    (Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
+                );
+                var menu = GetPlayerMenu(p);
+                menu.Add(new[] { new InlineKeyboardCallbackButton("❌Delete this message", "delete") });
+                if (q == null)
+                    Bot.Send(text, p.Id, menu.ToKeyboard()).Wait();
+                else
+                    Bot.Edit(text, q.Message, menu.ToKeyboard()).Wait();
             }
-            var text = "Players".ToBold() + ":\n";
-            text += Players.Aggregate("", (s, pl) =>
-                s +
-                p.DistanceSeen(pl, Players).ToEmoji() +
-                pl.Name + " - " + pl.Character.GetString<Character>() +
-                (pl.Role == Role.Sheriff ? SheriffIndicator : "") +
-                pl.LivesString() +
-                (Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
-            );
-            var menu = GetPlayerMenu(p);
-            menu.Add(new[] { new InlineKeyboardCallbackButton("❌Delete this message", "delete") });
-            if (q == null)
-                Bot.Send(text, p.Id, menu.ToKeyboard()).Wait();
-            else
-                Bot.Edit(text, q.Message, menu.ToKeyboard()).Wait();
+            catch (Exception e)
+            {
+                Program.LogError(e);
+            }
         }
 
         private List<InlineKeyboardCallbackButton[]> GetPlayerMenu(Player p)
@@ -139,7 +144,7 @@ namespace BangGameBot
 
         public void SendMessages(Player menurecipient = null, IEnumerable<InlineKeyboardCallbackButton[]> menu = null)
         {
-            foreach (var p in Players)
+            foreach (var p in Players.Union(DeadPlayers))
                 SendMessage(p, p.Id == (menurecipient?.Id ?? 0) ? menu.ToList() : null);
         }
 
