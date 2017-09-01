@@ -83,7 +83,6 @@ namespace BangGameBot
             public string Text = "";
             public List<CardName> CardsUsed = new List<CardName>();
             public List<Character> Characters = new List<Character>();
-            public bool Blank => String.IsNullOrWhiteSpace(Text) && CardsUsed.Count() + Characters.Count() == 0;
 
             public void Clear()
             {
@@ -91,12 +90,6 @@ namespace BangGameBot
                 CardsUsed.Clear();
                 Characters.Clear();
             }
-
-            public void InsertHelpCommands()
-            {
-                Text += Helpers.MakeHelpString(CardsUsed, Characters);
-            }
-
         };
 
 

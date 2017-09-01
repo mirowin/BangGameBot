@@ -77,10 +77,10 @@ namespace BangGameBot
             try
             {
                 var msg = p.QueuedMsg;
-                if (msg.Blank)
+                if (String.IsNullOrWhiteSpace(msg.Text))
                     return;
                 if (p.HelpMode)
-                    msg.InsertHelpCommands();
+                    msg.Text += Helpers.MakeHelpString(msg.CardsUsed, msg.Characters);
                 if (menu == null)
                     menu = new List<InlineKeyboardCallbackButton[]>();
                 menu.Add(new[]

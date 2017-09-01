@@ -60,10 +60,9 @@ namespace BangGameBot
             rolesToAssign.Add(Role.Sheriff);
             rolesToAssign.Add(Role.Renegade);
             if (count >= 3)
-            {
                 rolesToAssign.Add(Role.Outlaw);
+            if (count >= 4)
                 rolesToAssign.Add(Role.Outlaw);
-            }
             if (count >= 5)
                 rolesToAssign.Add(Role.DepSheriff);
             if (count >= 6)
@@ -174,7 +173,7 @@ namespace BangGameBot
                     SendMessages(curplayer, MakeMenuFromCards(cardsdrawn, curplayer));
                     var cardchosen = (WaitForChoice(curplayer, 30)?.CardChosen ?? DefaultChoice.ChooseCardFrom(cardsdrawn));
                     Dealer.PutIntoDeck(curplayer, cardchosen);
-                    Tell($"You put {cardchosen.GetDescription()} back at the top of the deck.", curplayer, cardchosen.Name, textforothers: $"{curplayer.Name} put a card back at the top the deck");
+                    Tell($"You put {cardchosen.GetDescription()} back at the top of the deck.", curplayer, cardchosen.Name, Character.KitCarlson, textforothers: $"{curplayer.Name} put a card back at the top the deck");
                     break;
                 case Character.BlackJack:
                     Tell("You are Black Jack. You show the second card you draw; on Hearts or Diamonds, you draw one more card.", curplayer, character: Character.BlackJack);
@@ -205,11 +204,11 @@ namespace BangGameBot
                                 //steal from a player
                                 UsePanicOrCatBalou(curplayer);
                             }
-                            else
+                            else //pedro ramirez
                             {
                                 var card = Dealer.DrawFromGraveyard(curplayer);
                                 var desc = card.GetDescription();
-                                Tell($"You drew {desc} from the graveyard", curplayer, card.Name, textforothers: $"{curplayer.Name} drew {desc} from the graveyard");
+                                Tell($"You drew {desc} from the graveyard", curplayer, card.Name, Character.PedroRamirez, textforothers: $"{curplayer.Name} drew {desc} from the graveyard");
                             }
                             DrawCards(curplayer, 1);
                             break;
@@ -271,8 +270,9 @@ namespace BangGameBot
                     Discard(curplayer, secondchosencard);
                     Tell(
                         $"You discarded {secondchosencard.GetDescription()}, and regained a life point.",
-                        curplayer,
-                        textforothers: $"{curplayer.Name} discarded {chosencard.GetDescription()} and {secondchosencard.GetDescription()}, and regained a life point!"); //TODO: multiple cards
+                        curplayer, chosencard.Name,
+                        textforothers: $"{curplayer.Name} discarded {chosencard.GetDescription()} and {secondchosencard.GetDescription()}, and regained a life point!");
+                    TellEveryone("", secondchosencard.Name, Character.SidKetchum);
                     curplayer.AddLives(1);
                     //SendMessages();
                     continue;
@@ -324,6 +324,7 @@ namespace BangGameBot
                     case CardName.Missed:
                         if (curplayer.Character != Character.CalamityJanet)
                             throw new Exception("Someone is using Missed! during their turn!");
+                        TellEveryone("", character: Character.CalamityJanet);
                         UseBang(curplayer);
                         break;
                     case CardName.Beer:
@@ -353,7 +354,9 @@ namespace BangGameBot
                         break;
                     case CardName.GeneralStore:
                         var reshuffled = Dealer.PeekCards(Players.Count()).Item2;
-                        TellEveryone(Dealer.PeekedCards.Aggregate($"{curplayer.Name} draws the following cards from the deck" + (reshuffled ? " reshuffling it" : " ") + ":\n", (s, c) => s + c.GetDescription() + "\n")); //TODO multiple cards
+                        TellEveryone(Dealer.PeekedCards.Aggregate($"{curplayer.Name} draws the following cards from the deck" + (reshuffled ? " reshuffling it" : " ") + ":\n", (s, c) => s + c.GetDescription() + "\n"));
+                        foreach (var card in Dealer.PeekedCards.Select(x => x.Name))
+                            TellEveryone("", card);
                         SendMessages();
                         for (var i = 0; i < Players.Count(); i++)
                         {
@@ -410,7 +413,7 @@ namespace BangGameBot
                 var player = duelling[i];
                 if (player.CardsInHand.Any(c => c.Name == CardName.Bang) || (player.CardsInHand.Any(c => c.Name == CardName.Missed) && player.Character == Character.CalamityJanet))
                 {
-                    Tell("You may discard a Bang! card, or lose a life point.", player);
+                    Tell("You may discard a Bang! card, or lose a life point.", player, character: player.Character == Character.CalamityJanet ? Character.CalamityJanet : Character.None);
                     SendMessages(player, AddYesButton(MakeCardsInHandMenu(player, Situation.DiscardBang), "Lose a life point"));
                     WaitForChoice(player, 30);
                     if (player.Choice?.CardChosen != null)
@@ -434,7 +437,7 @@ namespace BangGameBot
             var candiscard = Players.Where(x => x.Id != curplayer.Id && (x.CardsInHand.Any(c => c.Name == CardName.Bang) || (x.Character == Character.CalamityJanet && x.CardsInHand.Any(c => c.Name == CardName.Missed))));
             foreach (var p in candiscard)
             {
-                Tell("You have a Bang! card! You may discard it, or lose a life point.", p);
+                Tell("You have a Bang! card! You may discard it, or lose a life point.", p, character: curplayer.Character == Character.CalamityJanet ? Character.CalamityJanet : Character.None);
                 SendMessages(p, AddYesButton(MakeCardsInHandMenu(p, Situation.DiscardBang), "Lose a life point"));
             }
             var tasks = new List<Task>();
@@ -469,6 +472,8 @@ namespace BangGameBot
 
         private void UseBang(Player attacker)
         {
+            if (attacker.UsedBang && attacker.Character == Character.WillyTheKid)
+                TellEveryone("", character: Character.WillyTheKid);
             attacker.UsedBang = true;
             var possiblechoices = Players.Where(x => x.IsReachableBy(attacker, Players));
             Player target;
@@ -485,7 +490,7 @@ namespace BangGameBot
                 Tell($"You chose to shoot {target.Name}.", attacker);
             }
 
-            TellEveryone($"{attacker.Name} shot {target.Name}!", except: new[] { target, attacker });
+            TellEveryone($"{attacker.Name} shot {target.Name}!", character: attacker.Character == Character.SlabTheKiller ? Character.SlabTheKiller : Character.None, except: new[] { target, attacker });
             Tell($"You were shot by {attacker.Name}!" + (attacker.Character == Character.SlabTheKiller ? " You'll need two Missed! cards to miss his Bang!" : ""), target, character: attacker.Character == Character.SlabTheKiller ? Character.SlabTheKiller : Character.None);
 
             if (!Missed(attacker, target, false))
@@ -520,14 +525,14 @@ namespace BangGameBot
             {
                 if (target.CardsInHand.Any(x => x.Name == CardName.Missed) || (target.Character == Character.CalamityJanet && target.CardsInHand.Any(x => x.Name == CardName.Bang)))
                 {
-                    Tell("You have a Missed! card. You have the possibility to miss the shoot!", target);
+                    Tell("You have a Missed! card. You have the possibility to miss the shoot!", target, character: target.Character == Character.CalamityJanet ? Character.CalamityJanet : Character.None);
                     SendMessages(target, AddYesButton(MakeCardsInHandMenu(target, Situation.PlayerShot), "Lose a life point"));
                     var choice = WaitForChoice(target, 30)?.CardChosen;
                     if (choice != null)
                     {
                         if (choice.Name != CardName.Missed && (choice.Name != CardName.Bang || target.Character != Character.CalamityJanet))
                             throw new Exception("Target was supposed to miss the shoot.");
-                        Tell($"You played {choice.GetDescription()}.", target, textforothers: $"{target.Name} played {choice.GetDescription()}.");
+                        Tell($"You played {choice.GetDescription()}.", target, character: target.Character == Character.CalamityJanet ? Character.CalamityJanet : Character.None, textforothers: $"{target.Name} played {choice.GetDescription()}.");
                         Discard(target, choice);
                         missed++;
                     }
@@ -569,7 +574,7 @@ namespace BangGameBot
             {
                 Tell($"{target.Name} missed your shot!", curplayer);
                 Tell($"You missed {curplayer.Name}'s shot!", target);
-                TellEveryone($"{target.Name} missed {curplayer.Name}'s shot!", except: new[] { target, curplayer });
+                TellEveryone($"{target.Name} missed {curplayer.Name}'s shot!", character: curplayer.Character == Character.SlabTheKiller ? Character.SlabTheKiller : Character.None, except: new[] { target, curplayer });
                 SendMessages();
                 return true;
             }
@@ -829,7 +834,7 @@ namespace BangGameBot
                 //tell people the two cards
                 var cardchosen = WaitForChoice(player, 30).CardChosen ?? DefaultChoice.ChooseCardFrom(cards);
                 var carddiscarded = cards.First(x => x != cardchosen);
-                Tell($"You choose {cardchosen.GetDescription()} and discard {carddiscarded.GetDescription()}.", player, textforothers: $"{player.Name} chose {cardchosen.GetDescription()} and discarded {carddiscarded.GetDescription()}.");
+                Tell($"You choose {cardchosen.GetDescription()} and discard {carddiscarded.GetDescription()}.", player, character: Character.LuckyDuke, textforothers: $"{player.Name} chose {cardchosen.GetDescription()} and discarded {carddiscarded.GetDescription()}.");
                 
                 //discard the cards
                 Discard(player, carddiscarded);
@@ -858,6 +863,7 @@ namespace BangGameBot
             if (p.Character == Character.SuzyLafayette && p.CardsInHand.Count() == 0)
             {
                 DrawCards(p, 1);
+                TellEveryone("", CardName.None, Character.SuzyLafayette);
             }
             return result;
         }
@@ -875,6 +881,7 @@ namespace BangGameBot
                 {
                     case Character.BartCassidy:
                         DrawCards(target, lives);
+                        TellEveryone("", CardName.None, Character.BartCassidy);
                         break;
                     case Character.ElGringo:
                         if (attacker != null)
@@ -882,8 +889,8 @@ namespace BangGameBot
                             var card = target.StealFrom(attacker);
                             var desc = card.GetDescription();
                             Tell($"You stole {desc} from {attacker.Name}'s hand.", target, card.Name);
-                            Tell($"{target.Name} stole you {desc}", attacker, card.Name);
-                            TellEveryone($"{target.Name} stole a card from {attacker.Name}'s hand.", card.Name, except: new[] { attacker, target });
+                            Tell($"{target.Name} stole you {desc}", attacker, card.Name, Character.ElGringo);
+                            TellEveryone($"{target.Name} stole a card from {attacker.Name}'s hand.", card.Name, Character.ElGringo, except: new[] { attacker, target });
                         }
                         break;
                     default:
@@ -940,8 +947,9 @@ namespace BangGameBot
                         Discard(target, secondchoice.CardChosen);
                         Tell(
                             $"You discarded {secondchoice.CardChosen.GetDescription()}, and regained a life point.",
-                            target, //TODO: multiple cards
+                            target, choice.CardChosen.Name, Character.SidKetchum,
                             textforothers: $"{target.Name} discarded {choice.CardChosen.GetDescription()} and {secondchoice.CardChosen.GetDescription()}, and regained a life point!");
+                        TellEveryone("", secondchoice.CardChosen.Name);
                         target.AddLives(1);
                     }
                 }
