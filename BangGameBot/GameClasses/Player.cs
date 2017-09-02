@@ -92,7 +92,6 @@ namespace BangGameBot
             }
         };
 
-
         /// <summary>
         /// Steals card c from player p. If card is null, a random card from hand is chosen. Returns the stolen card
         /// </summary>

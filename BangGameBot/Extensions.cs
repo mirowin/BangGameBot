@@ -292,6 +292,11 @@ namespace BangGameBot
                     return CardType.Normal;
             }
         }
+
+        public static T OnlyIf<T>(this T input, bool condition)
+        {
+            return condition ? input : new List<T>().FirstOrDefault();
+        }
     }
 }
 

@@ -50,10 +50,23 @@ namespace BangGameBot
             buttons.Add(new[] { new InlineKeyboardCallbackButton(str, $"game|bool|yes") });
             return buttons;
         }
+
+        public void AddToHelp(Player p, List<Card> cards)
+        {
+            foreach (var c in cards.Select(x => x.Name))
+                Tell("", p, c);
+        }
+
+        public void AddToHelp(List<Card> cards)
+        {
+            foreach (var p in Players)
+                AddToHelp(p, cards);
+        }
         
         public void Tell(string text, Player p, CardName cardused = CardName.None, Character character = Character.None, string textforothers = null)
         {
-            p.QueuedMsg.Text += "\n" + text;
+            if (!String.IsNullOrWhiteSpace(text))
+                p.QueuedMsg.Text += "\n" + text;
             if (character != Character.None && !p.QueuedMsg.Characters.Contains(character))
                 p.QueuedMsg.Characters.Add(character);
             if (cardused != CardName.None && !p.QueuedMsg.CardsUsed.Contains(cardused))
@@ -65,7 +78,10 @@ namespace BangGameBot
 
         public void TellEveryone(string text, CardName cardused = CardName.None, Character character = Character.None, IEnumerable<Player> except = null)
         {
-            foreach (var p in Players.Union(DeadPlayers).Except(except))
+            var recipients = Players.Union(DeadPlayers);
+            if (except != null)
+                recipients = recipients.Except(except);
+            foreach (var p in recipients)
                 Tell(text, p, cardused, character);
             return;
         }
@@ -81,13 +97,14 @@ namespace BangGameBot
                     msg.Text += Helpers.MakeHelpString(msg.CardsUsed, msg.Characters);
                 if (menu == null)
                     menu = new List<InlineKeyboardCallbackButton[]>();
-                menu.Add(new[]
-                {
-                new InlineKeyboardCallbackButton("Players", $"game|players|new"),
-                new InlineKeyboardCallbackButton("Your cards", $"game|mycards")
-            });
+                menu.Add(new[] {
+                    new InlineKeyboardCallbackButton("Players", $"game|players|new"),
+                    new InlineKeyboardCallbackButton("Your cards", $"game|mycards")
+                });
                 if (p.CurrentMsg != null)
                     Bot.EditMenu(null, p.CurrentMsg).Wait();
+                if (menu == null)
+                    throw new Exception("MENU IS NULL!");
 
                 p.CurrentMsg = Bot.Send(msg.Text, p.Id, menu.ToKeyboard()).Result;
                 msg.Clear();

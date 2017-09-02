@@ -170,10 +170,12 @@ namespace BangGameBot
                     Tell("You are Kit Carlson. You draw 3 cards from the deck, then choose one to put back at the top of the deck.", curplayer, character: Character.KitCarlson);
                     cardsdrawn = DrawCards(curplayer, 3);
                     Tell("Choose the card to put back into the deck.", curplayer);
+                    AddToHelp(curplayer, cardsdrawn);
                     SendMessages(curplayer, MakeMenuFromCards(cardsdrawn, curplayer));
                     var cardchosen = (WaitForChoice(curplayer, 30)?.CardChosen ?? DefaultChoice.ChooseCardFrom(cardsdrawn));
                     Dealer.PutIntoDeck(curplayer, cardchosen);
-                    Tell($"You put {cardchosen.GetDescription()} back at the top of the deck.", curplayer, cardchosen.Name, Character.KitCarlson, textforothers: $"{curplayer.Name} put a card back at the top the deck");
+                    Tell($"You put {cardchosen.GetDescription()} back at the top of the deck.", curplayer, CardName.None, Character.KitCarlson, textforothers: $"{curplayer.Name} put a card back at the top the deck");
+                    Tell("", curplayer, cardchosen.Name);
                     break;
                 case Character.BlackJack:
                     Tell("You are Black Jack. You show the second card you draw; on Hearts or Diamonds, you draw one more card.", curplayer, character: Character.BlackJack);
@@ -285,6 +287,7 @@ namespace BangGameBot
                 {
                     if (cardchosen.Name == CardName.Jail)
                     {
+                        Tell($"You used {cardchosen.GetDescription()}", curplayer, cardchosen.Name, textforothers: $"{curplayer.Name} used {cardchosen.GetDescription()}.");
                         var possiblechoices = Players.Where(x => x.Role != Role.Sheriff && !x.CardsOnTable.Any(c => c.Name == CardName.Jail) && x.Id != curplayer.Id);
                         Player chosenplayer;
                         if (possiblechoices.Count() == 1)
@@ -455,6 +458,7 @@ namespace BangGameBot
                 Task.Delay(1000).Wait();
             
             var missedplayers = candiscard.Where(x => x.Choice?.CardChosen != null);
+            var hitplayers = Players.Where(x => !missedplayers.Union(curplayer.ToSinglet()).Contains(x));
             foreach (var p in missedplayers)
             {
                 if (p.Choice.CardChosen.Name != CardName.Bang && (p.Choice.CardChosen.Name != CardName.Missed || p.Character != Character.CalamityJanet))
@@ -462,7 +466,7 @@ namespace BangGameBot
                 Discard(p, p.Choice.CardChosen);
                 Tell($"You discarded {p.Choice.CardChosen.GetDescription()}.", p, p.Choice.CardChosen.Name, textforothers: $"{p.Name} discarded {p.Choice.CardChosen.GetDescription()}");
             }
-            foreach (var p in Players.Except(missedplayers).Except(curplayer.ToSinglet()))
+            foreach (var p in hitplayers)
             {
                 HitPlayer(p, 1, curplayer);
                 if (Status == GameStatus.Ending) return;
@@ -551,14 +555,14 @@ namespace BangGameBot
             Tell(jourdounnais ? 
                 "You are Jourdounnais: you are considered to have a Barrel in play. Do you want to use this ability?" : 
                 "You have a Barrel in play. Do you want to use it?",
-                target, jourdounnais ? CardName.None : CardName.Barrel, jourdounnais ? Character.Jourdounnais : Character.None);
+                target, CardName.Barrel, jourdounnais ? Character.Jourdounnais : Character.None);
             var candefend = (jourdounnais && target.CardsOnTable.Any(x => x.Name == CardName.Barrel)) || (target.CardsInHand.Any(x => x.Name == CardName.Missed) || (target.CardsInHand.Any(x => x.Name == CardName.Bang) && target.Character == Character.CalamityJanet));
             SendMessages(target, MakeBoolMenu(jourdounnais ? "Use ability" : "Use Barrel", candefend ? "Defend otherwise" : "Lose a life point"));
             var choice = WaitForChoice(target, 20)?.ChoseYes ?? DefaultChoice.UseBarrel;
             if (!choice)
                 return false;
 
-            TellEveryone($"{target.Name} chose to use " + (jourdounnais ? "the ability." : "the Barrel."), jourdounnais ? CardName.None : CardName.Barrel, jourdounnais ? Character.Jourdounnais : Character.None, target.ToSinglet());
+            TellEveryone($"{target.Name} chose to use " + (jourdounnais ? "the ability." : "the Barrel."), CardName.Barrel, jourdounnais ? Character.Jourdounnais : Character.None, target.ToSinglet());
             if (Draw(target).Suit == CardSuit.Hearts)
             {
                 Tell("You drew a Heart! You missed the shoot.", target, textforothers: $"{target.Name} drew a Heart! The shoot is missed.");
@@ -687,7 +691,9 @@ namespace BangGameBot
                     curplayer, iscatbalou ? CardName.CatBalou : CardName.Panic,
                     textforothers: iscatbalou ? $"{curplayer.Name} chose to discard a card from {playerchosen.Name}." : $"{curplayer.Name} chose to steal a card from {playerchosen.Name}.");
                 //make menu and send
-                var buttonslist = AddYesButton(MakeMenuFromCards(playerchosen.CardsOnTable, curplayer), iscatbalou ? "Discard from hand" : "Steal from hand");
+                var buttonslist = MakeMenuFromCards(playerchosen.CardsOnTable, curplayer);
+                if (playerchosen.CardsInHand.Count() > 0)
+                    buttonslist = AddYesButton(buttonslist, iscatbalou ? "Discard from hand" : "Steal from hand");
                 SendMessages(curplayer, buttonslist);
 
                 //see what they chose
@@ -708,7 +714,7 @@ namespace BangGameBot
                 Tell(iscatbalou ? $"You discarded {card} from {playerchosen.Name}'s hand." : $"You stole {card} from {playerchosen.Name}'s hand.", 
                     curplayer, realcard.Name);
                 Tell(iscatbalou? $"{curplayer.Name} discarded your {card}." : $"{curplayer.Name} stole you {card}", playerchosen, realcard.Name);
-                TellEveryone(iscatbalou ? $"{curplayer.Name} discarded {card} from {playerchosen.Name}'s hand." : $"{curplayer.Name} stole a card from {playerchosen.Name}'s hand.", realcard.Name, except: new[] { curplayer, playerchosen });
+                TellEveryone(iscatbalou ? $"{curplayer.Name} discarded {card} from {playerchosen.Name}'s hand." : $"{curplayer.Name} stole a card from {playerchosen.Name}'s hand.", iscatbalou ? realcard.Name : CardName.None, except: new[] { curplayer, playerchosen });
             }
             else
             {
