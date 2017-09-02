@@ -345,10 +345,40 @@ namespace BangGameBot
                         break;
                     case CardName.Gatling:
                         TellEveryone($"{curplayer.Name} shot everyone!", CardName.Gatling, except: curplayer.ToSinglet());
+                        var candiscard = Players.Where(x => x.Id != curplayer.Id && //not curplayer
+                            x.Character != Character.Jourdounnais && !x.CardsOnTable.Any(c => c.Name == CardName.Barrel) && //no barrel
+                            (x.CardsInHand.Any(c => c.Name == CardName.Missed) || (x.Character == Character.CalamityJanet && x.CardsInHand.Any(c => c.Name == CardName.Bang))) // have a missed! card
+                        ); //these can only discard a missed card, and can do that all together. the others will choose if use barrel or so
+
+                        foreach (var p in candiscard)
+                        {
+                            Tell("You have a Missed! card! You may use it to miss the shot, or lose a life point.", p, character: curplayer.Character == Character.CalamityJanet ? Character.CalamityJanet : Character.None);
+                            SendMessages(p, AddYesButton(MakeCardsInHandMenu(p, Situation.PlayerShot), "Lose a life point"));
+                        }
+                        var tasks = new List<Task>();
+                        foreach (var p in candiscard)
+                        {
+                            var task = new Task(() => {
+                                var discarded = WaitForChoice(p, 30)?.CardChosen;
+                                Tell("You chose to " + (discarded != null ? $"use {discarded.GetDescription()}." : "lose a life point.") + "\nWaiting for the other players to choose...", p);
+                                SendMessage(p);
+                            });
+                            tasks.Add(task);
+                            task.Start();
+                        }
+                        while (tasks.Any(x => !x.IsCompleted))
+                            Task.Delay(1000).Wait();
+
                         for (var i = Turn + 1; i != Turn; i = ++i % Players.Count())
                         {
                             var target = Players[i];
-                            if (!Missed(curplayer, target, true))
+                            var discarded = target.Choice?.CardChosen;
+                            if (discarded != null)
+                            {
+                                Tell($"You played {discarded.GetDescription()}.", target, character: target.Character == Character.CalamityJanet ? Character.CalamityJanet : Character.None, textforothers: $"{target.Name} played {discarded.GetDescription()}.");
+                                Discard(target, discarded);
+                            }
+                            else if (!Missed(curplayer, target, true))
                             {
                                 HitPlayer(target, 1, curplayer);
                                 if (Status == GameStatus.Ending) return;
@@ -457,19 +487,21 @@ namespace BangGameBot
             while (tasks.Any(x => !x.IsCompleted))
                 Task.Delay(1000).Wait();
             
-            var missedplayers = candiscard.Where(x => x.Choice?.CardChosen != null);
-            var hitplayers = Players.Where(x => !missedplayers.Union(curplayer.ToSinglet()).Contains(x));
-            foreach (var p in missedplayers)
+            for (var i = 1; i < Players.Count(); i++)
             {
-                if (p.Choice.CardChosen.Name != CardName.Bang && (p.Choice.CardChosen.Name != CardName.Missed || p.Character != Character.CalamityJanet))
-                    throw new Exception("The player was meant to discard a Bang! card.");
-                Discard(p, p.Choice.CardChosen);
-                Tell($"You discarded {p.Choice.CardChosen.GetDescription()}.", p, p.Choice.CardChosen.Name, textforothers: $"{p.Name} discarded {p.Choice.CardChosen.GetDescription()}");
-            }
-            foreach (var p in hitplayers)
-            {
-                HitPlayer(p, 1, curplayer);
-                if (Status == GameStatus.Ending) return;
+                var p = Players[(Turn + i) % Players.Count()];
+                if (p.Choice?.CardChosen != null) // discarded
+                {
+                    if (p.Choice.CardChosen.Name != CardName.Bang && (p.Choice.CardChosen.Name != CardName.Missed || p.Character != Character.CalamityJanet))
+                        throw new Exception("The player was meant to discard a Bang! card.");
+                    Discard(p, p.Choice.CardChosen);
+                    Tell($"You discarded {p.Choice.CardChosen.GetDescription()}.", p, p.Choice.CardChosen.Name, textforothers: $"{p.Name} discarded {p.Choice.CardChosen.GetDescription()}");
+                }
+                else
+                {
+                    HitPlayer(p, 1, curplayer);
+                    if (Status == GameStatus.Ending) return;
+                }
             }
             return;
         }
