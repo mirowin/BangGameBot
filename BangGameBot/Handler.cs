@@ -56,19 +56,32 @@ namespace BangGameBot
                         Bot.Send("Hello! I'm a test bot.", userid);
                         break;
                     case "newgame":
-                        //check to see if they are in a game
-                        if (Games.Any(x => x.Players.Any(y => y.Id == userid)))
+                        //check if they are in a game
+                        if (Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
                         {
-                            Bot.Send("Already in a game", chatid);
+                            Bot.Send("Already in a game. You can /leave it to start a new game.", chatid);
                             return;
                         }
                         //add them to a game
                         if (Games.Any(x => x.Status == GameStatus.Joining))
                             //there should be only one game joining at a time, but...
-                            Games.Where(x => x.Status == GameStatus.Joining).OrderBy(x => x.Players.Count()).FirstOrDefault().AddPlayer(msg.From);
+                            Games.Where(x => x.Status == GameStatus.Joining).OrderBy(x => x.Users.Count()).FirstOrDefault().AddPlayer(msg.From);
                         else
                             //create new game
                             Games.Add(new Game(msg));
+                        return;
+                    case "leave":
+                        if (Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
+                        {
+                            var menu = new[]
+                            {
+                                new InlineKeyboardCallbackButton("Leave", "leave"),
+                                new InlineKeyboardCallbackButton("Cancel", "delete")
+                            };
+                            Bot.Send("Are you sure you want to leave this game? You won't be able to receive any message from it anymore.", chatid, menu.ToSinglet().ToKeyboard());
+                        }
+                        else
+                            Bot.Send("You are not in a game.", chatid);
                         return;
                     case "photoid":
                         if (userid != Program.renyhp)
@@ -78,7 +91,7 @@ namespace BangGameBot
                         Bot.Send(msg.ReplyToMessage?.Photo[0]?.FileId, chatid);
                         return;
                     case "help":
-                        var reply = "TBD. Complete rules: http://www.dvgiochi.net/bang/bang_rules.pdf" +
+                        var reply = "TBD. Complete rules: http://www.dvgiochi.net/bang/bang_rules.pdf" + //TODO
                             "\nUse /helpMode to toggle the Help Mode." +
                             "\nAt any time, you can get info for any card by simply typing @BangGameBot and the card you're searching for.";
                         Bot.Send(reply, chatid);
@@ -97,24 +110,6 @@ namespace BangGameBot
                             settings.Update(playersettings);
                             Bot.Send("Help mode turned " + (playersettings.HelpMode ? "on" : "off"), chatid);
                         }
-                        return;
-                    case "edit":
-                        if (String.IsNullOrWhiteSpace(text) || msg.ReplyToMessage == null || msg.ReplyToMessage.From.Id != Bot.Me.Id)
-                            return;
-                        var ts = DateTime.UtcNow - msg.Date;
-                        var start = DateTime.UtcNow;
-                        text += $"\n\nTime to receive command: {ts:mm\\:ss\\.ff}";
-                        Bot.Edit(text, msg.ReplyToMessage).Wait();
-                        ts = DateTime.UtcNow - start;
-                        Bot.Edit(text.ToBold() + "\n\nYou have been added to a game.\n\n" + "Players:".ToBold() + "\nRenatone" + $"\nTime to edit msg: {ts:mm\\:ss\\.ff}", msg.ReplyToMessage).Wait();
-                        return;
-                    case "ping":
-                        var tsp = DateTime.UtcNow - msg.Date;
-                        var startp = DateTime.UtcNow;
-                        text += $"\n\nTime to receive command: {tsp:mm\\:ss\\.ff}";
-                        var result = Bot.Send(text, chatid).Result;
-                        tsp = DateTime.UtcNow - startp;
-                        Bot.Edit(text.ToBold() + "\n\nYou have been added to a game.\n\n" + "Players:".ToBold() + "\nRenatone" + $"\nTime to send msg: {tsp:mm\\:ss\\.ff}", result, new InlineKeyboardCallbackButton("Edit", "edit").ToSinglet().ToSinglet().ToKeyboard()).Wait();
                         return;
                     default:
                         return;
@@ -152,8 +147,8 @@ namespace BangGameBot
                 if (args[0] == "game" && args.Length >= 2)
                 {
                     //they are in a game, it's a game command
-                    var game = Games.FirstOrDefault(x => x.Players.Any(p => p.Id == userid));
-                    var player = game?.Players.FirstOrDefault(x => x.Id == userid);
+                    var game = Games.FirstOrDefault(x => x.Users.Any(p => p.Id == userid && !p.HasLeftGame));
+                    var player = game?.Users.FirstOrDefault(x => x.Id == userid);
                     if (player == null)
                     {
                         //remove the buttons and ignore.
@@ -172,7 +167,7 @@ namespace BangGameBot
                             game.SendPlayerList(player, args[2] == "new" ? null : q);
                             break;
                         case "playerinfo":
-                            game.SendPlayerInfo(q, game.Players.FirstOrDefault(x => x.Id == long.Parse(args[2])), player);
+                            game.SendPlayerInfo(q, game.Users.FirstOrDefault(x => x.Id == long.Parse(args[2])), player);
                             break;
                         case "mycards":
                             game.ShowMyCards(q, player);

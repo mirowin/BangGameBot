@@ -11,7 +11,7 @@ namespace BangGameBot
     public partial class Game
     {
         
-        private List<InlineKeyboardCallbackButton[]> MakeBoolMenu(string yes, string no)
+        private static List<InlineKeyboardCallbackButton[]> MakeBoolMenu(string yes, string no)
         {
             return new List<InlineKeyboardCallbackButton[]>() {
                 new []
@@ -33,23 +33,7 @@ namespace BangGameBot
             }
             return rows;
         }
-
-        private List<InlineKeyboardCallbackButton[]> MakeMenuFromCards(IEnumerable<Card> list, Player recipient)
-        {
-            var rows = new List<InlineKeyboardCallbackButton[]>();
-            foreach (var c in list)
-            {
-                var button = new InlineKeyboardCallbackButton(c.GetDescription(), $"game|card|{c.Encode()}");
-                rows.Add(recipient.HelpMode ? new[] { button, c.Name.ToHelpButton() } : button.ToSinglet());
-            }
-            return rows;
-        }
-
-        public List<InlineKeyboardCallbackButton[]> AddYesButton(List<InlineKeyboardCallbackButton[]> buttons, string str)
-        {
-            buttons.Add(new[] { new InlineKeyboardCallbackButton(str, $"game|bool|yes") });
-            return buttons;
-        }
+        
 
         public void AddToHelp(Player p, List<Card> cards)
         {
@@ -59,12 +43,14 @@ namespace BangGameBot
 
         public void AddToHelp(List<Card> cards)
         {
-            foreach (var p in Players)
+            foreach (var p in Watchers)
                 AddToHelp(p, cards);
         }
         
         public void Tell(string text, Player p, CardName cardused = CardName.None, Character character = Character.None, string textforothers = null)
         {
+            if (p.HasLeftGame)
+                return;
             if (!String.IsNullOrWhiteSpace(text))
                 p.QueuedMsg.Text += "\n" + text;
             if (character != Character.None && !p.QueuedMsg.Characters.Contains(character))
@@ -76,9 +62,9 @@ namespace BangGameBot
             return;
         }
 
-        public void TellEveryone(string text, CardName cardused = CardName.None, Character character = Character.None, IEnumerable<Player> except = null)
+        public void TellEveryone(string text = "", CardName cardused = CardName.None, Character character = Character.None, IEnumerable<Player> except = null)
         {
-            var recipients = Players.Union(DeadPlayers);
+            var recipients = Watchers;
             if (except != null)
                 recipients = recipients.Except(except);
             foreach (var p in recipients)
@@ -88,6 +74,8 @@ namespace BangGameBot
 
         public void SendMessage(Player p, List<InlineKeyboardCallbackButton[]> menu = null)
         {
+            if (p.HasLeftGame)
+                return;
             try
             {
                 var msg = p.QueuedMsg;
@@ -97,10 +85,10 @@ namespace BangGameBot
                     msg.Text += Helpers.MakeHelpString(msg.CardsUsed, msg.Characters);
                 if (menu == null)
                     menu = new List<InlineKeyboardCallbackButton[]>();
-                menu.Add(new[] {
-                    new InlineKeyboardCallbackButton("Players", $"game|players|new"),
-                    new InlineKeyboardCallbackButton("Your cards", $"game|mycards")
-                });
+                var lastrow = new List<InlineKeyboardCallbackButton>() { new InlineKeyboardCallbackButton("Players", $"game|players|new") };
+                if (!p.IsDead)
+                    lastrow.Add(new InlineKeyboardCallbackButton("Your cards", $"game|mycards"));
+                menu.AddRange(lastrow.ToArray().ToSinglet());
                 if (p.CurrentMsg != null)
                     Bot.EditMenu(null, p.CurrentMsg).Wait();
                 if (menu == null)
@@ -115,10 +103,16 @@ namespace BangGameBot
             }
         }
 
+        public void SendMessages(Player menurecipient = null, IEnumerable<InlineKeyboardCallbackButton[]> menu = null)
+        {
+            foreach (var p in Watchers)
+                SendMessage(p, p.Id == (menurecipient?.Id ?? 0) ? menu.ToList() : null);
+        }
+
         public void SendPlayerList()
         {
-            for (var i = 1; i < Players.Count() + 1; i++)
-                SendPlayerList(Players[(Turn + i) % Players.Count()]);
+            foreach (var w in Watchers)
+                SendPlayerList(w);
             return;
         }
 
@@ -127,13 +121,13 @@ namespace BangGameBot
             try
             {
                 var text = "Players".ToBold() + ":\n";
-                text += Players.Aggregate("", (s, pl) =>
+                text += Users.Aggregate("", (s, pl) =>
                     s +
-                    p.DistanceSeen(pl, Players).ToEmoji() +
+                    (p.IsDead ? "" : p.DistanceSeen(pl, AlivePlayers).ToEmoji())+
                     pl.Name + " - " + pl.Character.GetString<Character>() +
                     (pl.Role == Role.Sheriff ? SheriffIndicator : "") +
                     pl.LivesString() +
-                    (Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
+                    (Players.Contains(pl) && Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
                 );
                 var menu = GetPlayerMenu(p);
                 menu.Add(new[] { new InlineKeyboardCallbackButton("❌Delete this message", "delete") });
@@ -151,7 +145,7 @@ namespace BangGameBot
         private List<InlineKeyboardCallbackButton[]> GetPlayerMenu(Player p)
         {
             var rows = new List<InlineKeyboardCallbackButton[]>();
-            foreach (var pl in Players)
+            foreach (var pl in AlivePlayers)
             {
                 var button = new InlineKeyboardCallbackButton(pl.Name, $"game|playerinfo|{pl.Id}");
                 rows.Add(p.HelpMode ? new[] { button, pl.Character.ToHelpButton($"{pl.Character.GetString<Character>()}") } : button.ToSinglet());
@@ -159,11 +153,6 @@ namespace BangGameBot
             return rows;
         }
 
-        public void SendMessages(Player menurecipient = null, IEnumerable<InlineKeyboardCallbackButton[]> menu = null)
-        {
-            foreach (var p in Players.Union(DeadPlayers))
-                SendMessage(p, p.Id == (menurecipient?.Id ?? 0) ? menu.ToList() : null);
-        }
 
         public void SendPlayerInfo(CallbackQuery q, Player choice, Player recipient)
         {
@@ -185,32 +174,35 @@ namespace BangGameBot
 
         public void ShowMyCards(CallbackQuery q, Player p)
         {
-            Bot.SendAlert(q, "Cards in hand:\n" + string.Join(", ", p.CardsInHand.Select(x => x.GetDescription())) + "\n\nCards on table:\n" + string.Join(", ", p.CardsOnTable.Select(x => x.GetDescription())));
+            if (!p.IsDead)
+                Bot.SendAlert(q, "Cards in hand:\n" + string.Join(", ", p.CardsInHand.Select(x => x.GetDescription())) + "\n\nCards on table:\n" + string.Join(", ", p.CardsOnTable.Select(x => x.GetDescription())));
+            else
+                Bot.SendAlert(q);
+            return;
         }
 
         
 
-
         private void UpdateJoinMessages(bool startinggame = false, bool addingplayer = false)
         {
-            foreach (var p in Players)
+            foreach (var p in Users)
             {
                 //"title"
                 string text = startinggame ? "Game started!" : "You have been added to a game.";
                 //help for the button
-                if (Players.Count() >= MinPlayers && !startinggame)
+                if (Users.Count() >= MinPlayers && !startinggame)
                     text += p.VotedToStart ? "\nClick the Unvote button to remove your vote." : "\nClick the Start button to vote to start the game.";
                 //playerlist
                 text += "\n\n" + "Players:".ToBold();
-                text += Players.Aggregate("", (a, b) => a + "\n" + b.TelegramUser.FirstName + (b.VotedToStart || startinggame ? " 👍" : ""));
+                text += Users.Aggregate("", (a, b) => a + "\n" + b.TelegramUser.FirstName + (b.VotedToStart || startinggame ? " 👍" : ""));
 
                 text += startinggame ? "\n\nShuffling the deck and assigning roles and characters..." : "";
 
                 //menu
                 var buttons = new List<InlineKeyboardCallbackButton> { new InlineKeyboardCallbackButton("Leave", $"game|leave") };
-                if (Players.Count() >= MinPlayers)
+                if (Users.Count() >= MinPlayers)
                     buttons.Add(new InlineKeyboardCallbackButton(p.VotedToStart ? "Unvote" : "Start", $"game|start"));
-                var menu = new InlineKeyboardMarkup(buttons.ToArray());
+                var menu = buttons.ToArray().ToSinglet().ToKeyboard();
 
                 if (p.PlayerListMsg == null)
                     p.PlayerListMsg = Bot.Send(text, p.Id, startinggame ? null : menu).Result;
@@ -229,14 +221,12 @@ namespace BangGameBot
         }
 
         
-        private Choice WaitForChoice(Player p, int maxseconds)
+        private Choice WaitForChoice(Player p)
         {
-#if DEBUG
-            maxseconds = int.MaxValue;
-#endif
+            int maxseconds = int.MaxValue; //TODO
             p.Choice = null;
             var timer = 0;
-            while (p.Choice == null && timer < maxseconds)
+            while (p.Choice == null && timer < maxseconds && !p.HasLeftGame)
             {
                 Task.Delay(1000).Wait();
                 timer++;

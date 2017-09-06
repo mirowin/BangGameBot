@@ -31,7 +31,7 @@
 
     public enum GameStatus
     {
-        Joining, PhaseZero, PhaseOne, PhaseTwo, PhaseThree,
+        Joining, Initialising, PhaseZero, PhaseOne, PhaseTwo, PhaseThree,
         Ending
     }
 

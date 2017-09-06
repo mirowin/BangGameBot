@@ -51,12 +51,14 @@ namespace BangGameBot
         //GAME
         public bool VotedToStart = false;
         public bool UsedBang = false;
+        public bool IsDead = false;
         public Choice Choice = null;
         public List<Card> Cards = new List<Card>();
         public int Lives { get; private set; }
         public Character Character;
         public Role Role;
         public Card Weapon = null;
+        public bool HasLeftGame = false;
 
         public List<Card> CardsOnTable
         {

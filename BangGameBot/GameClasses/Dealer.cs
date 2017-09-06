@@ -63,9 +63,19 @@ namespace BangGameBot
             if (c == null)
                 c = p.ChooseCardFromHand();
             p.Cards.Remove(c);
-            c.IsOnTable = false;
             SendToGraveyard(c);
             return c;
+        }
+
+        /// <summary>
+        /// Player p discards all his cards
+        /// </summary>
+        public void DiscardAll(Player p)
+        {
+            foreach (var c in p.Cards)
+                SendToGraveyard(c);
+            p.Cards.Clear();
+            return;
         }
 
         public void PutIntoDeck(Player p, Card c)

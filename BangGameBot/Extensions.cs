@@ -33,7 +33,8 @@ namespace BangGameBot
         }
 
         public static int DistanceSeen(this Player source, Player target, List<Player> players) {
-            if (source.Id == target.Id) return 0;
+            if (source.Id == target.Id)
+                return 0;
             var i = players.IndexOf(source);
             var j = players.IndexOf(target);
             //direct distance
@@ -41,7 +42,7 @@ namespace BangGameBot
             //cycling distance
             var dist2 = players.Count() - Math.Max(i, j) + Math.Min(i, j);
             var distance = Math.Min(dist1, dist2);
-            //account characters & cards!
+            //take characters & cards into account!
             if (target.Character == Character.PaulRegret)
                 distance++;
             if (target.CardsOnTable.Any(x => x.Name == CardName.Mustang))
@@ -135,7 +136,7 @@ namespace BangGameBot
             for (var i = 0; i < p.Lives; i++) {
                 r += "❤️";
             }
-            if (r == "")
+            if (p.IsDead)
                 r = "💀 - " + p.Role.GetString<Role>();
             return r;
         }
@@ -160,6 +161,23 @@ namespace BangGameBot
                     break;
             }
             return c.Name.GetString<CardName>() + "[" + numberstring + c.Suit.ToEmoji() + "]";
+        }
+
+        public static List<InlineKeyboardCallbackButton[]> MakeMenu(this IEnumerable<Card> list, Player recipient)
+        {
+            var rows = new List<InlineKeyboardCallbackButton[]>();
+            foreach (var c in list)
+            {
+                var button = new InlineKeyboardCallbackButton(c.GetDescription(), $"game|card|{c.Encode()}");
+                rows.Add(recipient.HelpMode ? new[] { button, c.Name.ToHelpButton() } : button.ToSinglet());
+            }
+            return rows;
+        }
+
+        public static List<InlineKeyboardCallbackButton[]> AddYesButton(this List<InlineKeyboardCallbackButton[]> buttons, string str)
+        {
+            buttons.Add(new[] { new InlineKeyboardCallbackButton(str, $"game|bool|yes") });
+            return buttons;
         }
 
         public static string Encode(this Card c) {
@@ -296,6 +314,11 @@ namespace BangGameBot
         public static T OnlyIf<T>(this T input, bool condition)
         {
             return condition ? input : new List<T>().FirstOrDefault();
+        }
+
+        public static Character OnlyIfMatches(this Character input, Player p)
+        {
+            return input.OnlyIf(p.Character == input);
         }
     }
 }
