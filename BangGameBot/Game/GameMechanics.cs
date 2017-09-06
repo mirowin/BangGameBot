@@ -45,7 +45,6 @@ namespace BangGameBot
             return;
         }
         
-
         private void AssignRoles()
         {
             var rolesToAssign = new List<Role>();
@@ -593,8 +592,7 @@ namespace BangGameBot
             else
                 return false;
         }
-
-
+        
         #endregion
         
         #region Other cards effect

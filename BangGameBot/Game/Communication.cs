@@ -34,20 +34,19 @@ namespace BangGameBot
             return rows;
         }
         
-
-        public void AddToHelp(Player p, List<Card> cards)
+        private void AddToHelp(Player p, List<Card> cards)
         {
             foreach (var c in cards.Select(x => x.Name))
                 Tell("", p, c);
         }
 
-        public void AddToHelp(List<Card> cards)
+        private void AddToHelp(List<Card> cards)
         {
-            foreach (var p in Watchers)
-                AddToHelp(p, cards);
+            foreach (var c in cards)
+                TellEveryone(cardused: c.Name);
         }
         
-        public void Tell(string text, Player p, CardName cardused = CardName.None, Character character = Character.None, string textforothers = null)
+        private void Tell(string text, Player p, CardName cardused = CardName.None, Character character = Character.None, string textforothers = null)
         {
             if (p.HasLeftGame)
                 return;
@@ -62,7 +61,7 @@ namespace BangGameBot
             return;
         }
 
-        public void TellEveryone(string text = "", CardName cardused = CardName.None, Character character = Character.None, IEnumerable<Player> except = null)
+        private void TellEveryone(string text = "", CardName cardused = CardName.None, Character character = Character.None, IEnumerable<Player> except = null)
         {
             var recipients = Watchers;
             if (except != null)
@@ -72,7 +71,13 @@ namespace BangGameBot
             return;
         }
 
-        public void SendMessage(Player p, List<InlineKeyboardCallbackButton[]> menu = null)
+        private void SendMessages(Player menurecipient = null, IEnumerable<InlineKeyboardCallbackButton[]> menu = null)
+        {
+            foreach (var p in Watchers)
+                SendMessage(p, p.Id == (menurecipient?.Id ?? 0) ? menu.ToList() : null);
+        }
+
+        private void SendMessage(Player p, List<InlineKeyboardCallbackButton[]> menu = null)
         {
             if (p.HasLeftGame)
                 return;
@@ -102,14 +107,8 @@ namespace BangGameBot
                 Program.LogError(e);
             }
         }
-
-        public void SendMessages(Player menurecipient = null, IEnumerable<InlineKeyboardCallbackButton[]> menu = null)
-        {
-            foreach (var p in Watchers)
-                SendMessage(p, p.Id == (menurecipient?.Id ?? 0) ? menu.ToList() : null);
-        }
-
-        public void SendPlayerList()
+        
+        private void SendPlayerList()
         {
             foreach (var w in Watchers)
                 SendPlayerList(w);
@@ -152,8 +151,7 @@ namespace BangGameBot
             }
             return rows;
         }
-
-
+        
         public void SendPlayerInfo(CallbackQuery q, Player choice, Player recipient)
         {
             var text = "";
@@ -180,9 +178,7 @@ namespace BangGameBot
                 Bot.SendAlert(q);
             return;
         }
-
         
-
         private void UpdateJoinMessages(bool startinggame = false, bool addingplayer = false)
         {
             foreach (var p in Users)
@@ -219,7 +215,6 @@ namespace BangGameBot
             }
             return;
         }
-
         
         private Choice WaitForChoice(Player p)
         {
