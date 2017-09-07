@@ -539,8 +539,6 @@ namespace BangGameBot
                     SendMessages(target, MakeCardsInHandMenu(target, Situation.PlayerShot).AddYesButton("Lose a life point"));
                     var choice = WaitForChoice(target);
                     var cardchosen = choice?.CardChosen;
-                    if (choice?.ChoseYes ?? DefaultChoice.LoseLifePoint)
-                        return false; //whenever they choose to lose a life point, immediately return false.
                     if (cardchosen != null)
                     {
                         if (cardchosen.Name != CardName.Missed && (cardchosen.Name != CardName.Bang || target.Character != Character.CalamityJanet))
@@ -549,6 +547,8 @@ namespace BangGameBot
                         Discard(target, cardchosen);
                         missed++;
                     }
+                    else //if they don't discard a missed card, they either want to lose a life point, or... afk.
+                        return false; //in that case, immediately return false.
                 }
                 if (CheckMissed(attacker, target, missed, isgatling))
                     return true;
