@@ -530,25 +530,32 @@ namespace BangGameBot
                 return true;
 
             //card
-            while (target.CardsInHand.Any(x => x.Name == CardName.Missed) || (target.Character == Character.CalamityJanet && target.CardsInHand.Any(x => x.Name == CardName.Bang)))  //target has a missed card
+            int counter = 0;
+            do
             {
-                Tell("You have a Missed! card. You have the possibility to miss the shoot!", target, character: Character.CalamityJanet.OnlyIfMatches(target));
-                SendMessages(target, MakeCardsInHandMenu(target, Situation.PlayerShot).AddYesButton("Lose a life point"));
-                var choice = WaitForChoice(target);
-                var cardchosen = choice?.CardChosen;
-                if (choice?.ChoseYes ?? DefaultChoice.LoseLifePoint)
-                    return false;
-                if (cardchosen != null)
+                if (target.CardsInHand.Any(x => x.Name == CardName.Missed) || (target.Character == Character.CalamityJanet && target.CardsInHand.Any(x => x.Name == CardName.Bang)))  //target has a missed card
                 {
-                    if (cardchosen.Name != CardName.Missed && (cardchosen.Name != CardName.Bang || target.Character != Character.CalamityJanet))
-                        throw new Exception("Target was supposed to miss the shoot.");
-                    Tell($"You played {cardchosen.GetDescription()}.", target, character: Character.CalamityJanet.OnlyIfMatches(target), textforothers: $"{target.Name} played {cardchosen.GetDescription()}.");
-                    Discard(target, cardchosen);
-                    missed++;
+                    Tell("You have a Missed! card. You have the possibility to miss the shoot!", target, character: Character.CalamityJanet.OnlyIfMatches(target));
+                    SendMessages(target, MakeCardsInHandMenu(target, Situation.PlayerShot).AddYesButton("Lose a life point"));
+                    var choice = WaitForChoice(target);
+                    var cardchosen = choice?.CardChosen;
+                    if (choice?.ChoseYes ?? DefaultChoice.LoseLifePoint)
+                        return false; //whenever they choose to lose a life point, immediately return false.
+                    if (cardchosen != null)
+                    {
+                        if (cardchosen.Name != CardName.Missed && (cardchosen.Name != CardName.Bang || target.Character != Character.CalamityJanet))
+                            throw new Exception("Target was supposed to miss the shoot.");
+                        Tell($"You played {cardchosen.GetDescription()}.", target, character: Character.CalamityJanet.OnlyIfMatches(target), textforothers: $"{target.Name} played {cardchosen.GetDescription()}.");
+                        Discard(target, cardchosen);
+                        missed++;
+                    }
                 }
                 if (CheckMissed(attacker, target, missed, isgatling))
                     return true;
-            }
+            } while (!isgatling && attacker.Character == Character.SlabTheKiller && ++counter < 2); // executions comes here only if the hit was not missed yet.
+                                                                                                    // if only one missed card was required (and wasn't played), !isgatling && attacker == slab is false, and "while" will exit from the cycle and return false.
+                                                                                                    // if it's slab the killer, repeat again. if they don't play the second missed card, checkmissed is false, and ++counter<2 will make them exit from the cycle and return false.
+
 
             return false;
         }
