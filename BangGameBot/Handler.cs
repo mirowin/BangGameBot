@@ -75,7 +75,7 @@ namespace BangGameBot
                         {
                             var menu = new[]
                             {
-                                new InlineKeyboardCallbackButton("Leave", "leave"),
+                                new InlineKeyboardCallbackButton("Leave", "game|leave"),
                                 new InlineKeyboardCallbackButton("Cancel", "delete")
                             };
                             Bot.Send("Are you sure you want to leave this game? You won't be able to receive any message from it anymore.", chatid, menu.ToSinglet().ToKeyboard());
@@ -161,7 +161,7 @@ namespace BangGameBot
                             game.VoteStart(player);
                             break;
                         case "leave":
-                            game.PlayerLeave(player);
+                            game.PlayerLeave(player, q);
                             break;
                         case "players":
                             game.SendPlayerList(player, args[2] == "new" ? null : q);

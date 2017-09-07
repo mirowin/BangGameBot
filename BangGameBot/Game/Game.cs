@@ -32,10 +32,10 @@ namespace BangGameBot
             return;
         }
 
-        public void PlayerLeave (Player p) {
+        public void PlayerLeave (Player p, CallbackQuery q) {
             if (Status == GameStatus.Joining)
             {
-                Bot.Edit("You have been removed from the game.", p.PlayerListMsg).Wait();
+                Bot.Edit("You have been removed from the game.", q.Message).Wait();
                 Users.Remove(p);
                 if (Users.Count() == 0)
                 {
@@ -47,8 +47,11 @@ namespace BangGameBot
                 UpdateJoinMessages(false, true);
             }
             else
+            {
                 p.HasLeftGame = true;
-
+                Bot.Edit("You have left this game. Start a new one with /newgame.", q.Message).Wait();
+            }
+                
             return;
 
         }

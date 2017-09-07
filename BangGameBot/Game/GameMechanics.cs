@@ -16,14 +16,14 @@ namespace BangGameBot
         private void StartGame()
         {
             Status = GameStatus.Initialising;
-            Players = new List<Player>(Users);
             AssignRoles();
             AssignCharacters();
             DealCards();
-
+            Players = new List<Player>(Users);
             while (Status != GameStatus.Ending)
             {
                 Status = GameStatus.PhaseZero;
+                ResetPlayers();
                 Turn = (Turn + 1) % Players.Count();
                 SendPlayerList();
                 CheckDynamiteAndJail();
@@ -37,8 +37,6 @@ namespace BangGameBot
                 }
                 else if (Status != GameStatus.Ending)
                     Discard(_currentPlayer, _currentPlayer.CardsOnTable.First(x => x.Name == CardName.Jail));
-
-                ResetPlayers();
             }
 
             this.Dispose();
@@ -48,7 +46,7 @@ namespace BangGameBot
         private void AssignRoles()
         {
             var rolesToAssign = new List<Role>();
-            var count = Players.Count();
+            var count = Users.Count();
             rolesToAssign.Add(Role.Sheriff);
             rolesToAssign.Add(Role.Renegade);
             if (count >= 3)
@@ -62,24 +60,24 @@ namespace BangGameBot
             if (count == 7)
                 rolesToAssign.Add(Role.DepSheriff);
 
-            Players.Shuffle();
-            Players.Shuffle();
+            Users.Shuffle();
+            Users.Shuffle();
             rolesToAssign.Shuffle();
             rolesToAssign.Shuffle();
 
-            if (Players.Count() != rolesToAssign.Count())
+            if (Users.Count() != rolesToAssign.Count())
                 throw new Exception("Players count != roles to assign");
 
             for (var i = 0; i < count; i++)
             {
-                Players[i].Role = rolesToAssign[i];
+                Users[i].Role = rolesToAssign[i];
             }
 
             //move sheriff to first place
-            var sheriffindex = Players.IndexOf(Players.First((x => x.Role == Role.Sheriff)));
-            Player temp = Players[0];
-            Players[0] = Players[sheriffindex];
-            Players[sheriffindex] = temp;
+            var sheriffindex = Users.IndexOf(Users.First((x => x.Role == Role.Sheriff)));
+            Player temp = Users[0];
+            Users[0] = Users[sheriffindex];
+            Users[sheriffindex] = temp;
 
             return;
         }
@@ -89,7 +87,7 @@ namespace BangGameBot
             var charsToAssign = new List<Character>();
             charsToAssign.AddRange(Enum.GetValues(typeof(Character)).Cast<Character>().Where(x => x != Character.None).ToList());
             
-            foreach (var p in Players)
+            foreach (var p in Users)
             {
                 //assign characters
                 p.Character = charsToAssign.Random();
@@ -97,12 +95,14 @@ namespace BangGameBot
                 //assign lives
                 p.SetLives();
             }
+            Users[1].AddLives(1- Users[1].MaxLives); //DEBUG
+
             return;
         }
 
         private void DealCards()
         {
-            foreach (var p in Players)
+            foreach (var p in Users)
                 Dealer.DrawCards(p.Lives, p);
             return;
         }
@@ -353,7 +353,7 @@ namespace BangGameBot
 
                         foreach (var p in candiscard)
                         {
-                            Tell("You have a Missed! card! You may use it to miss the shot, or lose a life point.", p, character: _currentPlayer.Character == Character.CalamityJanet ? Character.CalamityJanet : Character.None);
+                            Tell("You have a Missed! card! You may use it to miss the shot, or lose a life point.", p, character: Character.CalamityJanet.OnlyIfMatches(_currentPlayer));
                             SendMessages(p, MakeCardsInHandMenu(p, Situation.PlayerShot).AddYesButton("Lose a life point"));
                         }
                         var tasks = new List<Task>();
@@ -375,12 +375,12 @@ namespace BangGameBot
                             var target = Players[i];
                             if (target.IsDead) continue;
                             var discarded = target.Choice?.CardChosen;
-                            if (discarded != null)
+                            if (candiscard.Contains(target) && discarded != null)
                             {
-                                Tell($"You played {discarded.GetDescription()}.", target, character: target.Character == Character.CalamityJanet ? Character.CalamityJanet : Character.None, textforothers: $"{target.Name} played {discarded.GetDescription()}.");
+                                Tell($"You played {discarded.GetDescription()}.", target, character: Character.CalamityJanet.OnlyIfMatches(target), textforothers: $"{target.Name} played {discarded.GetDescription()}.");
                                 Discard(target, discarded);
                             }
-                            else if (!Missed(_currentPlayer, target, true))
+                            else if ((candiscard.Contains(target) && (target.Choice?.ChoseYes ?? DefaultChoice.LoseLifePoint)) || !Missed(_currentPlayer, target, true))
                             {
                                 HitPlayer(target, 1, _currentPlayer);
                                 if (Status == GameStatus.Ending) return;
@@ -534,13 +534,16 @@ namespace BangGameBot
             {
                 Tell("You have a Missed! card. You have the possibility to miss the shoot!", target, character: Character.CalamityJanet.OnlyIfMatches(target));
                 SendMessages(target, MakeCardsInHandMenu(target, Situation.PlayerShot).AddYesButton("Lose a life point"));
-                var choice = WaitForChoice(target)?.CardChosen;
-                if (choice != null)
+                var choice = WaitForChoice(target);
+                var cardchosen = choice?.CardChosen;
+                if (choice?.ChoseYes ?? DefaultChoice.LoseLifePoint)
+                    return false;
+                if (cardchosen != null)
                 {
-                    if (choice.Name != CardName.Missed && (choice.Name != CardName.Bang || target.Character != Character.CalamityJanet))
+                    if (cardchosen.Name != CardName.Missed && (cardchosen.Name != CardName.Bang || target.Character != Character.CalamityJanet))
                         throw new Exception("Target was supposed to miss the shoot.");
-                    Tell($"You played {choice.GetDescription()}.", target, character: Character.CalamityJanet.OnlyIfMatches(target), textforothers: $"{target.Name} played {choice.GetDescription()}.");
-                    Discard(target, choice);
+                    Tell($"You played {cardchosen.GetDescription()}.", target, character: Character.CalamityJanet.OnlyIfMatches(target), textforothers: $"{target.Name} played {cardchosen.GetDescription()}.");
+                    Discard(target, cardchosen);
                     missed++;
                 }
                 if (CheckMissed(attacker, target, missed, isgatling))
@@ -778,7 +781,7 @@ namespace BangGameBot
             Tell($"You lose {lives} life points.", target, textforothers: $"{target.Name} loses {lives} life points.\n");
 
             if (LethalHit(target))
-                PlayerDies(target);
+                PlayerDies(target, attacker);
             else
             {
                 switch (target.Character)
@@ -906,8 +909,15 @@ namespace BangGameBot
             }
             else
             {
-                TellEveryone($"{target.Name} discards all the cards: " + string.Join(", ", target.Cards.Select(x => x.GetDescription())));
-                Dealer.DiscardAll(target);
+                try
+                {
+                    TellEveryone($"{target.Name} discards all the cards: " + string.Join(", ", target.Cards.Select(x => x.GetDescription())));
+                    Dealer.DiscardAll(target);
+                }
+                catch (Exception e)
+                {
+                    Program.LogError(e);
+                }
             }
             SendMessages();
             return;

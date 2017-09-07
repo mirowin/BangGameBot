@@ -32,6 +32,7 @@ namespace BangGameBot
         public static readonly bool DiscardCard = false;
         public static readonly bool UseAblityPhaseThree = false;
         public static readonly bool UseBarrel = false;
+        public static readonly bool LoseLifePoint = true;
     }
 }
 

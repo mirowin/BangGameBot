@@ -33,8 +33,10 @@ namespace BangGameBot
         }
 
         public static int DistanceSeen(this Player source, Player target, List<Player> players) {
-            if (source.Id == target.Id)
+            if (target.IsDead)
                 return 0;
+            if (source.Id == target.Id)
+                return -1;
             var i = players.IndexOf(source);
             var j = players.IndexOf(target);
             //direct distance
@@ -110,7 +112,9 @@ namespace BangGameBot
 
         public static string ToEmoji(this int i)
         {
-            var emojis = new[] { "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟" };
+            if (i == -1)
+                return "➡️";
+            var emojis = new[] { "⏹", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟" };
             return emojis[i];
         }
 
