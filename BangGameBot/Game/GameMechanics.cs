@@ -377,9 +377,9 @@ namespace BangGameBot
                         while (tasks.Any(x => !x.IsCompleted))
                             Task.Delay(1000).Wait();
 
-                        for (var i = Turn + 1; i != Turn; i = ++i % Players.Count())
+                        for (var i = 1; i < Players.Count(); i++)
                         {
-                            var target = Players[i];
+                            var target = Players[(i + Turn) % Players.Count()];
                             if (target.IsDead) continue;
                             var discarded = target.Choice?.CardChosen;
                             if (candiscard.Contains(target) && discarded != null)
@@ -603,7 +603,7 @@ namespace BangGameBot
                 Tell($"{target.Name} missed your shot!", attacker);
                 Tell($"You missed {attacker.Name}'s shot!", target);
                 TellEveryone($"{target.Name} missed {attacker.Name}'s shot!", character: attacker.Character == Character.SlabTheKiller ? Character.SlabTheKiller : Character.None, except: new[] { target, attacker });
-                SendMessages();
+                //SendMessages();
                 return true;
             }
             else
@@ -781,7 +781,7 @@ namespace BangGameBot
                 //was from table
                 Tell(iscatbalou ? $"You discarded {card} from {playerchosen.Name}" : $"You stole {card} from {playerchosen.Name}.", curplayer, realcard.Name, textforothers: iscatbalou ? $"{curplayer.Name} discarded {card} from {playerchosen.Name}." : $"{curplayer.Name} stole {card} from {playerchosen.Name}.");
             }
-            SendMessages();
+            //SendMessages();
             return;
         }
 
@@ -818,7 +818,7 @@ namespace BangGameBot
                         break;
                 }
             }
-            SendMessages();
+            //SendMessages();
             return;
         }
 
