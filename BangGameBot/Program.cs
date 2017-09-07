@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
+using Telegram.Bot.Args;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -21,41 +22,34 @@ namespace BangGameBot
 
         public static void Main () {
             Console.WriteLine("Successfully connected to @" + Bot.Me.Username);
+
+            //handle updates
             Bot.Api.OnMessage += Bot_OnMessage;
             Bot.Api.OnCallbackQuery += Bot_OnCallbackQuery;
-            Bot.Api.OnReceiveError += Bot_Api_OnReceiveError;
-            Bot.Api.OnReceiveGeneralError += Bot_Api_OnReceiveGeneralError;
             Bot.Api.OnInlineQuery += Bot_OnInlineQuery;
+
+            //handle errors
+            AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler((s, e) => OnError(e.ExceptionObject));
+            Bot.Api.OnReceiveError += new EventHandler<ReceiveErrorEventArgs>((s, e) => OnError(e.ApiRequestException));
+            Bot.Api.OnReceiveGeneralError += new EventHandler<ReceiveGeneralErrorEventArgs>((s, e) => OnError(e.Exception));
+
+            //start receiving
             Bot.StartReceiving();
-            Thread.Sleep(-1);
+            new ManualResetEvent(false).WaitOne();
         }
 
-        static void Bot_OnInlineQuery (object sender, Telegram.Bot.Args.InlineQueryEventArgs e)
+        static void Bot_OnMessage(object sender, MessageEventArgs e)
         {
-            new Task(() => { Handler.HandleInlineQuery(e.InlineQuery); }).Start();
+            if (e.Message?.Date == null || e.Message.Date < StartTime.AddSeconds(-5))
+                return;
+            new Task(() => { Handler.HandleMessage(e.Message); }).Start();
             return;
         }
 
-        static void Bot_Api_OnReceiveGeneralError (object sender, Telegram.Bot.Args.ReceiveGeneralErrorEventArgs e)
+        static void Bot_OnCallbackQuery(object sender, CallbackQueryEventArgs e)
         {
-            if (!Bot.Api.IsReceiving)
-                Bot.StartReceiving();
-            LogError(e.Exception);
-            return;
-        }
-
-        static void Bot_Api_OnReceiveError (object sender, Telegram.Bot.Args.ReceiveErrorEventArgs e)
-        {
-            if (!Bot.Api.IsReceiving)
-                Bot.StartReceiving();
-            if (!e.ApiRequestException.Message.Contains("timed out"))
-                LogError(e.ApiRequestException);
-            return;
-        }
-
-        static void Bot_OnCallbackQuery (object sender, Telegram.Bot.Args.CallbackQueryEventArgs e)
-        {
-            if (e.CallbackQuery?.Message?.Date == null || e.CallbackQuery.Message.Date < Program.StartTime.AddSeconds(-5)) {
+            if (e.CallbackQuery?.Message?.Date == null || e.CallbackQuery.Message.Date < Program.StartTime.AddSeconds(-5))
+            {
                 Bot.Edit("This message has expired.", e.CallbackQuery.Message);
                 return;
             }
@@ -63,31 +57,50 @@ namespace BangGameBot
             return;
         }
 
-        static void Bot_OnMessage (object sender, Telegram.Bot.Args.MessageEventArgs e)
+        static void Bot_OnInlineQuery (object sender, InlineQueryEventArgs e)
         {
-            if (e.Message?.Date == null || e.Message.Date < StartTime.AddSeconds (-5))
-                return;
-            new Task(() => { Handler.HandleMessage(e.Message); }).Start();
+            new Task(() => { Handler.HandleInlineQuery(e.InlineQuery); }).Start();
             return;
         }
 
-        public static void LogError (Exception e)
+        
+        public static void OnError (object o)
         {
-            var msg = "";
-            do {
-                msg = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") + " - " + e.GetType().ToString() + " " + e.Source +
-                Environment.NewLine + e.Message +
-                Environment.NewLine + e.StackTrace + Environment.NewLine + Environment.NewLine;
+            if (o is ApiRequestException apiex && apiex.Message == "Request timed out")
+                return;
+
+            if (o is Exception e)
+            {
+                var msg = "";
+                var counter = 0;
+                do
+                {
+                    var spaces = new String(' ', counter);
+                    msg += spaces + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") + " - " + o.GetType().ToString() + " " + e.Source +
+                        Environment.NewLine + spaces + e.Message +
+                        Environment.NewLine + spaces + e.StackTrace +
+                        Environment.NewLine + Environment.NewLine;
+                    
+                    e = e.InnerException;
+                    counter++;
+                } while (e != null);
+                msg += Environment.NewLine +
+                    "------------------------------------------------------------------------------------" +
+                    Environment.NewLine + Environment.NewLine;
                 System.IO.File.AppendAllText(LogPath, msg);
-                try {
+                try
+                {
                     Bot.Send(msg, renyhp);
-                } catch {
-                    //ignored
                 }
-                e = e.InnerException;
-            } while (e != null);
+                catch
+                {
+                    // ignored
+                }
+            }
             return;
         }
+
+        
     }
 
 

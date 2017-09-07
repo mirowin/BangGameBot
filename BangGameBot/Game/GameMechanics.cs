@@ -260,32 +260,25 @@ namespace BangGameBot
                     return;
                 if (choice.ChoseYes == false)
                 {
-                    try
-                    {
-                        if (_currentPlayer.Character != Character.SidKetchum)
-                            throw new Exception("Someone chose no during Phase Two...");
-                        //it was sid ketchum! he wants to discard two cards and regain one life point.
-                        Tell($"Choose the cards to discard.", _currentPlayer);
-                        SendMessages(_currentPlayer, _currentPlayer.CardsInHand.MakeMenu(_currentPlayer));
-                        var chosencard = WaitForChoice(_currentPlayer)?.CardChosen ?? _currentPlayer.ChooseCardFromHand();
-                        Discard(_currentPlayer, chosencard);
-                        Tell($"You discarded {chosencard.GetDescription()}. Select another card to discard.", _currentPlayer, chosencard.Name);
-                        SendMessages(_currentPlayer, _currentPlayer.CardsInHand.MakeMenu(_currentPlayer));
-                        var secondchosencard = WaitForChoice(_currentPlayer)?.CardChosen ?? _currentPlayer.ChooseCardFromHand();
-                        Discard(_currentPlayer, secondchosencard);
-                        Tell(
-                            $"You discarded {secondchosencard.GetDescription()}, and regained a life point.",
-                            _currentPlayer, chosencard.Name,
-                            textforothers: $"{_currentPlayer.Name} discarded {chosencard.GetDescription()} and {secondchosencard.GetDescription()}, and regained a life point!");
-                        TellEveryone("", secondchosencard.Name, Character.SidKetchum);
-                        _currentPlayer.AddLives(1);
-                        //SendMessages();
-                        continue;
-                    }
-                    catch (Exception e)
-                    {
-                        Program.LogError(e);
-                    }
+                    if (_currentPlayer.Character != Character.SidKetchum)
+                        throw new Exception("Someone chose no during Phase Two...");
+                    //it was sid ketchum! he wants to discard two cards and regain one life point.
+                    Tell($"Choose the cards to discard.", _currentPlayer);
+                    SendMessages(_currentPlayer, _currentPlayer.CardsInHand.MakeMenu(_currentPlayer));
+                    var chosencard = WaitForChoice(_currentPlayer)?.CardChosen ?? _currentPlayer.ChooseCardFromHand();
+                    Discard(_currentPlayer, chosencard);
+                    Tell($"You discarded {chosencard.GetDescription()}. Select another card to discard.", _currentPlayer, chosencard.Name);
+                    SendMessages(_currentPlayer, _currentPlayer.CardsInHand.MakeMenu(_currentPlayer));
+                    var secondchosencard = WaitForChoice(_currentPlayer)?.CardChosen ?? _currentPlayer.ChooseCardFromHand();
+                    Discard(_currentPlayer, secondchosencard);
+                    Tell(
+                        $"You discarded {secondchosencard.GetDescription()}, and regained a life point.",
+                        _currentPlayer, chosencard.Name,
+                        textforothers: $"{_currentPlayer.Name} discarded {chosencard.GetDescription()} and {secondchosencard.GetDescription()}, and regained a life point!");
+                    TellEveryone("", secondchosencard.Name, Character.SidKetchum);
+                    _currentPlayer.AddLives(1);
+                    //SendMessages();
+                    continue;
                 }
 
 
@@ -921,15 +914,8 @@ namespace BangGameBot
             }
             else
             {
-                try
-                {
-                    TellEveryone($"{target.Name} discards all the cards: " + string.Join(", ", target.Cards.Select(x => x.GetDescription())));
-                    Dealer.DiscardAll(target);
-                }
-                catch (Exception e)
-                {
-                    Program.LogError(e);
-                }
+                TellEveryone($"{target.Name} discards all the cards: " + string.Join(", ", target.Cards.Select(x => x.GetDescription())));
+                Dealer.DiscardAll(target);
             }
             SendMessages();
             return;

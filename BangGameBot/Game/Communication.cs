@@ -81,31 +81,24 @@ namespace BangGameBot
         {
             if (p.HasLeftGame)
                 return;
-            try
-            {
-                var msg = p.QueuedMsg;
-                if (String.IsNullOrWhiteSpace(msg.Text))
-                    return;
-                if (p.HelpMode)
-                    msg.Text += Helpers.MakeHelpString(msg.CardsUsed, msg.Characters);
-                if (menu == null)
-                    menu = new List<InlineKeyboardCallbackButton[]>();
-                var lastrow = new List<InlineKeyboardCallbackButton>() { new InlineKeyboardCallbackButton("Players", $"game|players|new") };
-                if (!p.IsDead)
-                    lastrow.Add(new InlineKeyboardCallbackButton("Your cards", $"game|mycards"));
-                menu.AddRange(lastrow.ToArray().ToSinglet());
-                if (p.CurrentMsg != null)
-                    Bot.EditMenu(null, p.CurrentMsg).Wait();
-                if (menu == null)
-                    throw new Exception("MENU IS NULL!");
+            var msg = p.QueuedMsg;
+            if (String.IsNullOrWhiteSpace(msg.Text))
+                return;
+            if (p.HelpMode)
+                msg.Text += Helpers.MakeHelpString(msg.CardsUsed, msg.Characters);
+            if (menu == null)
+                menu = new List<InlineKeyboardCallbackButton[]>();
+            var lastrow = new List<InlineKeyboardCallbackButton>() { new InlineKeyboardCallbackButton("Players", $"game|players|new") };
+            if (!p.IsDead)
+                lastrow.Add(new InlineKeyboardCallbackButton("Your cards", $"game|mycards"));
+            menu.AddRange(lastrow.ToArray().ToSinglet());
+            if (p.CurrentMsg != null)
+                Bot.EditMenu(null, p.CurrentMsg).Wait();
+            if (menu == null)
+                throw new Exception("MENU IS NULL!");
 
-                p.CurrentMsg = Bot.Send(msg.Text, p.Id, menu.ToKeyboard()).Result;
-                msg.Clear();
-            }
-            catch (Exception e)
-            {
-                Program.LogError(e);
-            }
+            p.CurrentMsg = Bot.Send(msg.Text, p.Id, menu.ToKeyboard()).Result;
+            msg.Clear();
         }
         
         private void SendPlayerList()
@@ -117,28 +110,21 @@ namespace BangGameBot
 
         public void SendPlayerList(Player p, CallbackQuery q = null)
         {
-            try
-            {
-                var text = "Players".ToBold() + ":\n";
-                text += Users.Aggregate("", (s, pl) =>
-                    s +
-                    (p.IsDead ? "" : p.DistanceSeen(pl, AlivePlayers).ToEmoji())+
-                    pl.Name + " - " + pl.Character.GetString<Character>() +
-                    (pl.Role == Role.Sheriff ? SheriffIndicator : "") +
-                    pl.LivesString() +
-                    (Players.Contains(pl) && Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
-                );
-                var menu = GetPlayerMenu(p);
-                menu.Add(new[] { new InlineKeyboardCallbackButton("❌Delete this message", "delete") });
-                if (q == null)
-                    Bot.Send(text, p.Id, menu.ToKeyboard()).Wait();
-                else
-                    Bot.Edit(text, q.Message, menu.ToKeyboard()).Wait();
-            }
-            catch (Exception e)
-            {
-                Program.LogError(e);
-            }
+            var text = "Players".ToBold() + ":\n";
+            text += Users.Aggregate("", (s, pl) =>
+                s +
+                (p.IsDead ? "" : p.DistanceSeen(pl, AlivePlayers).ToEmoji()) +
+                pl.Name + " - " + pl.Character.GetString<Character>() +
+                (pl.Role == Role.Sheriff ? SheriffIndicator : "") +
+                pl.LivesString() +
+                (Players.Contains(pl) && Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
+            );
+            var menu = GetPlayerMenu(p);
+            menu.Add(new[] { new InlineKeyboardCallbackButton("❌Delete this message", "delete") });
+            if (q == null)
+                Bot.Send(text, p.Id, menu.ToKeyboard()).Wait();
+            else
+                Bot.Edit(text, q.Message, menu.ToKeyboard()).Wait();
         }
 
         private List<InlineKeyboardCallbackButton[]> GetPlayerMenu(Player p)
