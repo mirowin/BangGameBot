@@ -89,12 +89,10 @@ namespace BangGameBot
             
             foreach (var p in Users)
             {
-                ////assign characters
-                //p.Character = charsToAssign.Random();
-                //charsToAssign.Remove(p.Character);
+                //assign characters
+                p.Character = charsToAssign.Random();
+                charsToAssign.Remove(p.Character);
 
-                //DEBUG
-                p.Character = Character.SidKetchum;
                 //assign lives
                 p.SetLives();
             }
@@ -826,11 +824,9 @@ namespace BangGameBot
 
         private bool LethalHit(Player target)
         {
-            if (target.Lives > 0)
-                return false;
-
             //check if they can be saved
-            while (target.CardsInHand.Count(x => x.Name == CardName.Beer) > -target.Lives || //they have enough beers
+            while (target.Lives <= 0 && //lethal hit
+                target.CardsInHand.Count(x => x.Name == CardName.Beer) > -target.Lives || //they have enough beers
                 (target.Character == Character.SidKetchum && CanUseAbility(target, Situation.PlayerDying))) //they are sid ketchum and have enough cards / beers.
             {
                 List<InlineKeyboardCallbackButton[]> menu;
