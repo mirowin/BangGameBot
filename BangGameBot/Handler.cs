@@ -97,10 +97,11 @@ namespace BangGameBot
                         Bot.Send(reply, chatid);
                         return;
                     case "helpmode":
-                        using (var db = new LiteDatabase("BangDB.db"))
+                        Settings playersettings;
+                        using (var db = new LiteDatabase(Program.LiteDBConnectionString))
                         {
                             var settings = db.GetCollection<Settings>("settings");
-                            var playersettings = settings.FindOne(x => x.TelegramId == userid);
+                            playersettings = settings.FindOne(x => x.TelegramId == userid);
                             if (playersettings == null)
                             {
                                 playersettings = new Settings { TelegramId = userid, HelpMode = false };
@@ -108,8 +109,13 @@ namespace BangGameBot
                             }
                             playersettings.HelpMode = !playersettings.HelpMode;
                             settings.Update(playersettings);
-                            Bot.Send("Help mode turned " + (playersettings.HelpMode ? "on" : "off"), chatid);
                         }
+                        Bot.Send("Help mode turned " + (playersettings.HelpMode ? "on" : "off"), chatid);
+
+                        //change helpmode in game         
+                        var player = Games.FirstOrDefault(x => x.Users.Any(p => p.Id == userid && !p.HasLeftGame))?.Users.FirstOrDefault(x => x.Id == userid);
+                        if (player != null)
+                            player.HelpMode = playersettings.HelpMode;
                         return;
                     default:
                         return;

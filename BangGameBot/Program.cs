@@ -19,8 +19,9 @@ namespace BangGameBot
         public static readonly string LogPath = "errors.log";
         public static readonly long renyhp = 133748469;
         public static readonly DateTime StartTime = DateTime.UtcNow;
+        public static readonly string LiteDBConnectionString = "Filename=BangDB.db;Journal=false";
 
-        public static void Main () {
+        public static void Main() {
             Console.WriteLine("Successfully connected to @" + Bot.Me.Username);
 
             //handle updates
@@ -29,7 +30,11 @@ namespace BangGameBot
             Bot.Api.OnInlineQuery += Bot_OnInlineQuery;
 
             //handle errors
-            AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler((s, e) => OnError(e.ExceptionObject));
+
+            AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler((s, e) => {
+                Console.WriteLine("ERROR!");
+                OnError(e.ExceptionObject);
+            });
             Bot.Api.OnReceiveError += new EventHandler<ReceiveErrorEventArgs>((s, e) => OnError(e.ApiRequestException));
             Bot.Api.OnReceiveGeneralError += new EventHandler<ReceiveGeneralErrorEventArgs>((s, e) => OnError(e.Exception));
 

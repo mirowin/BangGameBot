@@ -26,22 +26,7 @@ namespace BangGameBot
         public string Name { get; }
         public User TelegramUser { get; }
 
-        public bool HelpMode {
-            get
-            {
-                using (var db = new LiteDatabase("BangDB.db"))
-                {
-                    var settings = db.GetCollection<Settings>("settings");
-                    var playersettings = settings.FindOne(x => x.TelegramId == Id);
-                    if (playersettings == null)
-                    {
-                        playersettings = new Settings { TelegramId = Id, HelpMode = false };
-                        settings.Insert(playersettings);
-                    }
-                    return playersettings.HelpMode;
-                }
-            }
-        }
+        public bool HelpMode;
 
         //MESSAGES
         public Message PlayerListMsg = null;
@@ -78,6 +63,20 @@ namespace BangGameBot
             TelegramUser = u;
             Id = u.Id;
             Name = (u.FirstName.Length < 10 ? u.FirstName : u.FirstName.Substring(0, 10) + "...").FormatHTML();
+
+            //set helpmode
+            using (var db = new LiteDatabase(Program.LiteDBConnectionString))
+            {
+                var settings = db.GetCollection<Settings>("settings");
+                var playersettings = settings.FindOne(x => x.TelegramId == Id);
+                if (playersettings == null)
+                {
+                    playersettings = new Settings { TelegramId = Id, HelpMode = false };
+                    settings.Insert(playersettings);
+                }
+
+                HelpMode = playersettings.HelpMode;
+            }
         }
 
         public class GameMessage
