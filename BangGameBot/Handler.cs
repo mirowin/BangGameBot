@@ -117,6 +117,9 @@ namespace BangGameBot
                         if (player != null)
                             player.HelpMode = playersettings.HelpMode;
                         return;
+
+                    case "throw":
+                        throw new Exception("This is an exception");
                     default:
                         return;
                 }
