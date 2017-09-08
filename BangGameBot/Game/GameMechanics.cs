@@ -15,31 +15,49 @@ namespace BangGameBot
 
         private void StartGame()
         {
-            Status = GameStatus.Initialising;
-            AssignRoles();
-            AssignCharacters();
-            DealCards();
-            Players = new List<Player>(Users);
-            while (Status != GameStatus.Ending)
+            try
             {
-                Status = GameStatus.PhaseZero;
-                ResetPlayers();
-                Turn = (Turn + 1) % Players.Count();
-                SendPlayerList();
-                CheckDynamiteAndJail();
-                if (!_currentPlayer.CardsOnTable.Any(x => x.Name == CardName.Jail))
+                Status = GameStatus.Initialising;
+                AssignRoles();
+                AssignCharacters();
+                DealCards();
+                Players = new List<Player>(Users);
+                while (Status != GameStatus.Ending)
                 {
-                    PhaseOne();
-                    PhaseTwo();
-                    PhaseThree();
-                    if (Status != GameStatus.Ending)
-                        SendMessages(); //do a last send and disable menus
+                    Status = GameStatus.PhaseZero;
+                    ResetPlayers();
+                    Turn = (Turn + 1) % Players.Count();
+                    SendPlayerList();
+                    CheckDynamiteAndJail();
+                    if (!_currentPlayer.CardsOnTable.Any(x => x.Name == CardName.Jail))
+                    {
+                        PhaseOne();
+                        PhaseTwo();
+                        PhaseThree();
+                        if (Status != GameStatus.Ending)
+                            SendMessages(); //do a last send and disable menus
+                    }
+                    else if (Status != GameStatus.Ending)
+                        Discard(_currentPlayer, _currentPlayer.CardsOnTable.First(x => x.Name == CardName.Jail));
                 }
-                else if (Status != GameStatus.Ending)
-                    Discard(_currentPlayer, _currentPlayer.CardsOnTable.First(x => x.Name == CardName.Jail));
             }
-
-            this.Dispose();
+            catch (Exception e)
+            {
+                try
+                {
+                    foreach (var w in Watchers)
+                        Bot.Send("OOPS! I'm very sorry. I had to cancel the game.\n\n" + e.Message, w.Id);
+                }
+                catch
+                {
+                    // ignored
+                }
+                Program.OnError(e);
+            }
+            finally
+            {
+                this.Dispose();
+            }
             return;
         }
         

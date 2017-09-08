@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.ReplyMarkups;
 
 namespace BangGameBot
 {
