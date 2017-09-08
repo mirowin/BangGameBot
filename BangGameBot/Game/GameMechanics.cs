@@ -129,6 +129,7 @@ namespace BangGameBot
         {
             foreach (var p in Players.Where(x => x.HasLeftGame && !x.IsDead))
                 PlayerDies(p, null, true);
+            if (Status == GameStatus.Ending) return;
             Players = new List<Player>(AlivePlayers);
             foreach (var p in Players)
             {
@@ -836,9 +837,11 @@ namespace BangGameBot
         private bool LethalHit(Player target)
         {
             //check if they can be saved
-            while (target.Lives <= 0 && //lethal hit
+            while (
+                target.Lives <= 0 && //lethal hit
                 target.CardsInHand.Count(x => x.Name == CardName.Beer) > -target.Lives || //they have enough beers
-                (target.Character == Character.SidKetchum && CanUseAbility(target, Situation.PlayerDying))) //they are sid ketchum and have enough cards / beers.
+                (target.Character == Character.SidKetchum && CanUseAbility(target, Situation.PlayerDying)) //they are sid ketchum and have enough cards / beers.
+            ) 
             {
                 List<InlineKeyboardCallbackButton[]> menu;
                 if (target.Character == Character.SidKetchum)
@@ -954,7 +957,7 @@ namespace BangGameBot
                 SendMessages();
                 foreach (var p in Watchers)
                     Bot.Send(finalmsg, p.Id);
-                this.Dispose();
+                Status = GameStatus.Ending; 
             }
 
             return;

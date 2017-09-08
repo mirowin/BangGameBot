@@ -103,6 +103,7 @@ namespace BangGameBot
         
         private void SendPlayerList()
         {
+            if (Status == GameStatus.Ending) return;
             foreach (var w in Watchers)
                 SendPlayerList(w);
             return;

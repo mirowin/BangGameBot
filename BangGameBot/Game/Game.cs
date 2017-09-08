@@ -49,6 +49,13 @@ namespace BangGameBot
             {
                 p.HasLeftGame = true;
                 Bot.Edit("You have left this game. Start a new one with /newgame.", q.Message).Wait();
+                if (Players.All(x => x.HasLeftGame))
+                {
+                    if (Watchers.Any())
+                        foreach (var w in Watchers)
+                            Bot.Send("Everyone left the game! The game is cancelled.", w.Id);
+                    this.Dispose();
+                }
             }
                 
             return;
