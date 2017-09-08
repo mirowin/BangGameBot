@@ -19,7 +19,7 @@ namespace BangGameBot
         public static readonly string LogPath = "errors.log";
         public static readonly long renyhp = 133748469;
         public static readonly DateTime StartTime = DateTime.UtcNow;
-        public static readonly string LiteDBConnectionString = "Filename=BangDB.db;Journal=false";
+        public static readonly string LiteDBConnectionString = "BangDB.db";
 
         public static void Main() {
             Console.WriteLine("Successfully connected to @" + Bot.Me.Username);
