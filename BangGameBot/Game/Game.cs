@@ -16,7 +16,7 @@ namespace BangGameBot
         public List<Player> Players; // Players during current round
         public List<Player> AlivePlayers => Players.Where(x => !x.IsDead).ToList();
         public IEnumerable<Player> Watchers => Users.Where(x => !x.HasLeftGame);
-        private Dealer Dealer = new Dealer();
+        public Dealer Dealer = new Dealer();
         private int Turn = -1;
 
         public Game (Message msg) {

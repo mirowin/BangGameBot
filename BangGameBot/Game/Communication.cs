@@ -228,7 +228,7 @@ namespace BangGameBot
                     p.Choice = new Choice(Players.First(x => x.Id == long.Parse(choice)));
                     break;
                 case "card":
-                    p.Choice = new Choice(choice.GetCard(Dealer, Players));
+                    p.Choice = new Choice(choice.GetCard(this));
                     break;
                 case "playerinfo":
                     

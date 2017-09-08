@@ -188,9 +188,9 @@ namespace BangGameBot
             return c.Id.ToString();
         }
 
-        public static Card GetCard(this string str, Dealer d, List<Player> p)
+        public static Card GetCard(this string str, Game g)
         {
-            return d.Deck.Union(d.PeekedCards).Union(p.SelectMany(x => x.Cards)).FirstOrDefault(x => x.Id == int.Parse(str));
+            return g.Dealer.Deck.Union(g.Dealer.PeekedCards).Union(g.Users.SelectMany(x => x.Cards)).FirstOrDefault(x => x.Id == int.Parse(str));
         }
 
         public static T[] ToSinglet<T>(this T obj) {
