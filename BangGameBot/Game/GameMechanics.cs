@@ -65,7 +65,6 @@ namespace BangGameBot
         {
             var rolesToAssign = new List<Role>();
             var count = Users.Count();
-            rolesToAssign.Add(Role.Sheriff);
             rolesToAssign.Add(Role.Renegade);
             if (count >= 3)
                 rolesToAssign.Add(Role.Outlaw);
@@ -83,19 +82,15 @@ namespace BangGameBot
             rolesToAssign.Shuffle();
             rolesToAssign.Shuffle();
 
-            if (Users.Count() != rolesToAssign.Count())
+            if (Users.Count() - 1 != rolesToAssign.Count())
                 throw new Exception("Players count != roles to assign");
 
-            for (var i = 0; i < count; i++)
-            {
-                Users[i].Role = rolesToAssign[i];
-            }
+            //first one is sheriff
+            Users[0].Role = Role.Sheriff;
 
-            //move sheriff to first place
-            var sheriffindex = Users.IndexOf(Users.First((x => x.Role == Role.Sheriff)));
-            Player temp = Users[0];
-            Users[0] = Users[sheriffindex];
-            Users[sheriffindex] = temp;
+            //assign others randomly
+            for (var i = 1; i < count ; i++)
+                Users[i].Role = rolesToAssign[i - 1];
 
             return;
         }
