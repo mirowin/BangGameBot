@@ -117,5 +117,56 @@ namespace BangGameBot
             if (Lives > MaxLives)
                 Lives = MaxLives;
         }
+
+
+        public int DistanceSeen(Player target, List<Player> players)
+        {
+            if (target.IsDead)
+                return 0;
+            if (Id == target.Id)
+                return -1;
+            var i = players.IndexOf(this);
+            var j = players.IndexOf(target);
+            //direct distance
+            var dist1 = Math.Abs(j - i);
+            //cycling distance
+            var dist2 = players.Count() - Math.Max(i, j) + Math.Min(i, j);
+            var distance = Math.Min(dist1, dist2);
+            //take characters & cards into account!
+            if (target.Character == Character.PaulRegret)
+                distance++;
+            if (target.CardsOnTable.Any(x => x.Name == CardName.Mustang))
+                distance++;
+            if (Character == Character.RoseDoolan)
+                distance--;
+            if (CardsOnTable.Any(x => x.Name == CardName.Scope))
+                distance--;
+            return distance < 1 ? 1 : distance;
+        }
+
+        public bool IsReachableBy(Player source, List<Player> players)
+        {
+            if (Id == source.Id)
+                return false;
+            return source.DistanceSeen(this, players) <= (source.Weapon?.GetReachDistance() ?? 1);
+        }
+
+        public Card ChooseCardFromHand()
+        {
+            return CardsInHand.Random();
+        }
+
+
+        public string LivesString()
+        {
+            string r = "";
+            for (var i = 0; i < Lives; i++)
+            {
+                r += "❤️";
+            }
+            if (IsDead)
+                r = "💀 - " + Role.GetString<Role>();
+            return r;
+        }
     }
 }

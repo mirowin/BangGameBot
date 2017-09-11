@@ -28,57 +28,7 @@ namespace BangGameBot
             }
         }
 
-        public static Card ChooseCardFromHand(this Player p) {
-            return p.CardsInHand.Random();
-        }
-
-        public static int DistanceSeen(this Player source, Player target, List<Player> players) {
-            if (target.IsDead)
-                return 0;
-            if (source.Id == target.Id)
-                return -1;
-            var i = players.IndexOf(source);
-            var j = players.IndexOf(target);
-            //direct distance
-            var dist1 = Math.Abs(j - i);
-            //cycling distance
-            var dist2 = players.Count() - Math.Max(i, j) + Math.Min(i, j);
-            var distance = Math.Min(dist1, dist2);
-            //take characters & cards into account!
-            if (target.Character == Character.PaulRegret)
-                distance++;
-            if (target.CardsOnTable.Any(x => x.Name == CardName.Mustang))
-                distance++;
-            if (source.Character == Character.RoseDoolan)
-                distance--;
-            if (source.CardsOnTable.Any(x => x.Name == CardName.Scope))
-                distance--;
-            return distance < 1 ? 1 : distance;
-        }
-
-        public static bool IsReachableBy(this Player target, Player source, List<Player> players)
-        {
-            if (target.Id == source.Id)
-                return false;
-            int reachdistance = 1;
-            switch (source.Weapon?.Name)
-            {
-                case CardName.Schofield:
-                    reachdistance = 2;
-                    break;
-                case CardName.Remington:
-                    reachdistance = 3;
-                    break;
-                case CardName.RevCarabine:
-                    reachdistance = 4;
-                    break;
-                case CardName.Winchester:
-                    reachdistance = 5;
-                    break;
-            }
-            return source.DistanceSeen(target, players) <= reachdistance;
-        }
-
+        
         public static string GetString<T>(this object en)
         {
             var text = Enum.GetName(typeof(T), en);
@@ -134,39 +84,7 @@ namespace BangGameBot
             }
         }
 
-        public static string LivesString(this Player p)
-        {
-            string r = "";
-            for (var i = 0; i < p.Lives; i++) {
-                r += "❤️";
-            }
-            if (p.IsDead)
-                r = "💀 - " + p.Role.GetString<Role>();
-            return r;
-        }
-
-        public static string GetDescription(this Card c) {
-            var numberstring = "";
-            switch (c.Number) {
-                case 11:
-                    numberstring = "J";
-                    break;
-                case 12:
-                    numberstring = "Q";
-                    break;
-                case 13:
-                    numberstring = "K";
-                    break;
-                case 14:
-                    numberstring = "A";
-                    break;
-                default:
-                    numberstring = c.Number.ToString();
-                    break;
-            }
-            return c.Name.GetString<CardName>() + "[" + numberstring + c.Suit.ToEmoji() + "]";
-        }
-
+        
         public static List<InlineKeyboardCallbackButton[]> MakeMenu(this IEnumerable<Card> list, Player recipient)
         {
             var rows = new List<InlineKeyboardCallbackButton[]>();
@@ -184,10 +102,7 @@ namespace BangGameBot
             return buttons;
         }
 
-        public static string Encode(this Card c) {
-            return c.Id.ToString();
-        }
-
+        
         public static Card GetCard(this string str, Game g)
         {
             return g.Dealer.Deck.Union(g.Dealer.PeekedCards).Union(g.Users.SelectMany(x => x.Cards)).FirstOrDefault(x => x.Id == int.Parse(str));
@@ -294,27 +209,7 @@ namespace BangGameBot
             return new InlineKeyboardCallbackButton($"ℹ️{text}", $"help|card|{(int)c}");
         }
 
-        public static CardType GetCardType(this Card card)
-        {
-            switch (card.Name)
-            {
-                case CardName.Jail:
-                case CardName.Dynamite:
-                case CardName.Barrel:
-                case CardName.Scope:
-                case CardName.Mustang:
-                    return CardType.PermCard;
-                case CardName.Volcanic:
-                case CardName.Schofield:
-                case CardName.Remington:
-                case CardName.RevCarabine:
-                case CardName.Winchester:
-                    return CardType.Weapon;
-                default:
-                    return CardType.Normal;
-            }
-        }
-
+        
         public static T OnlyIf<T>(this T input, bool condition)
         {
             return condition ? input : new List<T>().FirstOrDefault();
