@@ -123,7 +123,7 @@ namespace BangGameBot
             return source.Skip(Math.Max(0, source.Count() - N));
         }
 
-        public static InlineKeyboardMarkup ToKeyboard(this IEnumerable<InlineKeyboardCallbackButton[]> buttons)
+        public static InlineKeyboardMarkup ToKeyboard(this IEnumerable<InlineKeyboardButton[]> buttons)
         {
             return new InlineKeyboardMarkup(buttons.ToArray());
         }

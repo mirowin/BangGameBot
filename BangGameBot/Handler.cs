@@ -17,11 +17,7 @@ namespace BangGameBot
             var chatid = msg.Chat.Id;
             var userid = msg.From.Id;
 
-            //for now don't do anything if not private
-            if (msg.Text == null || msg.Chat.Type != ChatType.Private)
-                return;
-
-            if (!msg.Text.StartsWith("/") && !msg.Text.StartsWith("!"))
+            if (msg.Text == null || (!msg.Text.StartsWith("/") && !msg.Text.StartsWith("!")))
                 return;
 
 
@@ -48,12 +44,19 @@ namespace BangGameBot
                 return;
             }
 
+            string reply;
             switch (cmd)
             {
                 case "start":
-                    Bot.Send("Hello! I'm a test bot.", userid);
+                    reply = "Hello! I can make you play games of Bang!, a card game by Emiliano Sciarra.\n\nSend /help for more information, or /newgame to start playing!";
+                    Bot.Send(reply, chatid);
                     break;
                 case "newgame":
+                    if (msg.Chat.Type != ChatType.Private)
+                    {
+                        Bot.Send("Message me privately to use this command!", chatid, new InlineKeyboardUrlButton("Start me", $"t.me/{Bot.Me.Username}").ToSinglet().ToSinglet().ToKeyboard());
+                        return;
+                    }
                     //check if they are in a game
                     if (Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
                     {
@@ -76,7 +79,7 @@ namespace BangGameBot
                                 new InlineKeyboardCallbackButton("Leave", "game|leave"),
                                 new InlineKeyboardCallbackButton("Cancel", "delete")
                             };
-                        Bot.Send("Are you sure you want to leave this game? You won't be able to receive any message from it anymore.", chatid, menu.ToSinglet().ToKeyboard());
+                        Bot.Send("Are you sure you want to leave the game? You won't be able to receive any message from it anymore.", chatid, menu.ToSinglet().ToKeyboard());
                     }
                     else
                         Bot.Send("You are not in a game.", chatid);
@@ -89,10 +92,10 @@ namespace BangGameBot
                     Bot.Send(msg.ReplyToMessage?.Photo[0]?.FileId, chatid);
                     return;
                 case "help":
-                    var reply = "TBD. Complete rules: http://www.dvgiochi.net/bang/bang_rules.pdf" + //TODO
+                    reply = "You can find the complete official rules for Bang! <a href=\"http://www.dvgiochi.net/bang/bang_rules.pdf\">here</a>." +
                         "\nUse /helpMode to toggle the Help Mode." +
                         "\nAt any time, you can get info for any card by simply typing @BangGameBot and the card you're searching for.";
-                    Bot.Send(reply, chatid);
+                    Bot.Api.SendTextMessageAsync(chatid, reply, ParseMode.Html);
                     return;
                 case "helpmode":
                     Settings playersettings;
