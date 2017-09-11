@@ -22,25 +22,21 @@ namespace BangGameBot
 
         public int GetReachDistance()
         {
-            int reachdistance;
             switch (Name)
             {
+                case CardName.Volcanic:
+                    return 1;
                 case CardName.Schofield:
-                    reachdistance = 2;
-                    break;
+                    return 2;
                 case CardName.Remington:
-                    reachdistance = 3;
-                    break;
+                    return 3;
                 case CardName.RevCarabine:
-                    reachdistance = 4;
-                    break;
+                    return 4;
                 case CardName.Winchester:
-                    reachdistance = 5;
-                    break;
+                    return 5;
                 default:
-                    throw new ArgumentException("c should be a Weapon");
+                    throw new ArgumentException("Card should be a Weapon");
             }
-            return reachdistance;
         }
 
 
