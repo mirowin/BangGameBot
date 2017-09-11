@@ -70,17 +70,17 @@ namespace BangGameBot
 
         public string GetButtonText()
         {
-            string description = "";
+            string emoji = "";
             switch (GetCardType())
             {
                 case CardType.Weapon:
-                    description = "🔫" + GetReachDistance().ToEmoji();
+                    emoji = "🔫" + GetReachDistance().ToEmoji();
                     break;
                 case CardType.PermCard:
-                    description = "🔵";
+                    emoji = "🔵";
                     break;
             }
-            return GetDescription() + description;
+            return emoji+GetDescription();
         }
 
 
