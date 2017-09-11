@@ -142,8 +142,8 @@ namespace BangGameBot
         {
             var text = "";
             text = choice.Name.ToBold() + "\n\n" +
-                "CHARACTER: " + choice.Character.GetString<Character>() + "\n" +
                 "ROLE: " + (choice.Role == Role.Sheriff ? " Sheriff" : (choice.Id == recipient.Id ? choice.Role.GetString<Role>() : "Unknown")) + "\n" +
+                "CHARACTER: " + choice.Character.GetString<Character>() + "\n" +
                 "LIFE POINTS: " + choice.LivesString() + "\n\n" +
                 "Cards in hand: " + (choice.Id == recipient.Id ?
                     ("\n" + string.Join(", ", recipient.CardsInHand.Select(x => x.GetDescription())) + "\n") :
@@ -164,8 +164,8 @@ namespace BangGameBot
                 return;
             }
 
-            var text = "CHARACTER: " + p.Character.GetString<Character>() +
-                "\nROLE: " + p.Role.GetString<Role>() +
+            var text = "ROLE: " + p.Role.GetString<Role>() +
+                "\nCHARACTER: " + p.Character.GetString<Character>() +
                 "\nLIFE POINTS: " + p.LivesString() + 
                 "\n\nCards in hand:\n" + string.Join(", ", p.CardsInHand.Select(x => x.GetDescription())) + 
                 "\n\nCards on table:\n" + string.Join(", ", p.CardsOnTable.Select(x => x.GetDescription()));
