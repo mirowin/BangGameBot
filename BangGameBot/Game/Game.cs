@@ -10,7 +10,6 @@ namespace BangGameBot
     {
         public static readonly int MinPlayers = 4;
         public static readonly int MaxPlayers = 7;
-        public static readonly string SheriffIndicator = " SHERIFF ";
         public GameStatus Status = GameStatus.Joining;
         public List<Player> Users = new List<Player>(); // The players that started the game 
         public List<Player> Players; // Players during current round

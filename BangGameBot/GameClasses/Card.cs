@@ -74,9 +74,10 @@ namespace BangGameBot
             switch (GetCardType())
             {
                 case CardType.Weapon:
-                    description = "🔫";
+                    description = "🔫" + GetReachDistance().ToEmoji();
                     break;
                 case CardType.PermCard:
+                    description = "🔵";
                     break;
             }
             return GetDescription() + description;

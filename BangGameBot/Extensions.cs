@@ -27,7 +27,6 @@ namespace BangGameBot
                 list[n] = value;
             }
         }
-
         
         public static string GetString<T>(this object en)
         {
@@ -90,7 +89,7 @@ namespace BangGameBot
             var rows = new List<InlineKeyboardCallbackButton[]>();
             foreach (var c in list)
             {
-                var button = new InlineKeyboardCallbackButton(c.GetDescription(), $"game|card|{c.Encode()}");
+                var button = new InlineKeyboardCallbackButton(c.GetButtonText(), $"game|card|{c.Encode()}");
                 rows.Add(recipient.HelpMode ? new[] { button, c.Name.ToHelpButton() } : button.ToSinglet());
             }
             return rows;
