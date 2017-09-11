@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Telegram.Bot.Types;
 
 namespace BangGameBot
@@ -66,7 +67,11 @@ namespace BangGameBot
             p.VotedToStart = !p.VotedToStart;
             UpdateJoinMessages(Users.All(x => x.VotedToStart), false);
             if (Users.All(x => x.VotedToStart))
+                Task.Delay(2000).Wait(); //wait for last second clicks of the buttons
+            if (Users.All(x => x.VotedToStart))
                 StartGame();
+            else
+                UpdateJoinMessages(false, false);
             return;
         }
 
@@ -76,7 +81,8 @@ namespace BangGameBot
             Handler.Games.Remove(this);
             Users.Clear();
             Users = null;
-            Players.Clear();
+            if (Players != null)
+                Players.Clear();
             Players = null;
             Dealer = null;
             return;

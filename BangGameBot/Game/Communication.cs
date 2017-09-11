@@ -168,37 +168,49 @@ namespace BangGameBot
         
         private void UpdateJoinMessages(bool startinggame = false, bool addingplayer = false)
         {
-            foreach (var p in Users)
+            //these are the same for all players.
+            var starttext = startinggame ? "Game started!" : "You have been added to a game.";
+            var playerlist = "Players:".ToBold() + Users.Aggregate("", (a, b) => a + "\n" + b.TelegramUser.FirstName + (b.VotedToStart || startinggame ? " 👍" : ""));
+            if (startinggame)
+                playerlist += "\n\nShuffling the deck and assigning roles and characters...";
+
+            foreach (var p in Users) //now create the message for each player
             {
-                //"title"
-                string text = startinggame ? "Game started!" : "You have been added to a game.";
-                //help for the button
+                var text = starttext;
                 if (Users.Count() >= MinPlayers && !startinggame)
                     text += p.VotedToStart ? "\nClick the Unvote button to remove your vote." : "\nClick the Start button to vote to start the game.";
-                //playerlist
-                text += "\n\n" + "Players:".ToBold();
-                text += Users.Aggregate("", (a, b) => a + "\n" + b.TelegramUser.FirstName + (b.VotedToStart || startinggame ? " 👍" : ""));
-
-                text += startinggame ? "\n\nShuffling the deck and assigning roles and characters..." : "";
+                text += "\n\n" + playerlist;
 
                 //menu
-                var buttons = new List<InlineKeyboardCallbackButton> { new InlineKeyboardCallbackButton("Leave", $"game|leave") };
-                if (Users.Count() >= MinPlayers)
-                    buttons.Add(new InlineKeyboardCallbackButton(p.VotedToStart ? "Unvote" : "Start", $"game|start"));
+                List<InlineKeyboardCallbackButton> buttons = new List<InlineKeyboardCallbackButton>();
+                if (!startinggame)
+                {
+                    buttons = new List<InlineKeyboardCallbackButton>() { new InlineKeyboardCallbackButton("Leave", $"game|leave") };
+                    if (Users.Count() >= MinPlayers)
+                        buttons.Add(new InlineKeyboardCallbackButton(p.VotedToStart ? "Unvote" : "Start", $"game|start"));
+                }
                 var menu = buttons.ToArray().ToSinglet().ToKeyboard();
 
-                if (p.PlayerListMsg == null)
-                    p.PlayerListMsg = Bot.Send(text, p.Id, startinggame ? null : menu).Result;
-                else if (addingplayer)
+                try
                 {
-                    Bot.Delete(p.PlayerListMsg).Wait();
-                    p.PlayerListMsg = Bot.Send(text, p.Id, startinggame ? null : menu).Result;
-                }
-                else
-                    p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, startinggame ? null : menu).Result;
+                    if (p.PlayerListMsg == null)
+                        p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+                    else if (addingplayer)
+                    {
+                        Bot.Delete(p.PlayerListMsg).Wait();
+                        p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+                    }
+                    else
+                        p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, menu).Result;
 
-                if (startinggame)
-                    p.PlayerListMsg = null;
+                    if (startinggame)
+                        p.PlayerListMsg = null;
+                }
+                catch
+                {
+                    try { if (p.PlayerListMsg != null) Bot.Delete(p.PlayerListMsg).Wait(); } catch { }
+                    try { p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result; } catch { }
+                }
             }
             return;
         }
