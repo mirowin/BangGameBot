@@ -30,8 +30,8 @@ namespace BangGameBot
             Bot.Api.OnInlineQuery += Bot_OnInlineQuery;
 
             //handle errors
-            Bot.Api.OnReceiveError += new EventHandler<ReceiveErrorEventArgs>((s, e) => OnError(e.ApiRequestException, "ApiError"));
-            Bot.Api.OnReceiveGeneralError += new EventHandler<ReceiveGeneralErrorEventArgs>((s, e) => OnError(e.Exception, "ApiGeneralError"));
+            Bot.Api.OnReceiveError += new EventHandler<ReceiveErrorEventArgs>((s, e) => LogError(e.ApiRequestException, "ApiError"));
+            Bot.Api.OnReceiveGeneralError += new EventHandler<ReceiveGeneralErrorEventArgs>((s, e) => LogError(e.Exception, "ApiGeneralError"));
 
             //start receiving
             Bot.StartReceiving();
@@ -53,7 +53,7 @@ namespace BangGameBot
                 catch (Exception ex)
                 {
                     Bot.Send("Oops, I have encountered an error.\n" + ex.Message, msg.Chat.Id);
-                    OnError(ex);
+                    LogError(ex);
                 }
             }).Start();
             return;
@@ -76,7 +76,7 @@ namespace BangGameBot
                 catch (Exception ex)
                 {
                     Bot.SendAlert(q, "Oops!\n" + ex.Message);
-                    OnError(ex);
+                    LogError(ex);
                 }
             }).Start();
             return;
@@ -93,14 +93,14 @@ namespace BangGameBot
                 catch (Exception ex)
                 {
                     Bot.Api.AnswerInlineQueryAsync(e.InlineQuery.Id, new InlineQueryResult() { Title = "Oops!", InputMessageContent = new InputTextMessageContent() { MessageText = ex.Message } }.ToSinglet());
-                    OnError(ex);
+                    LogError(ex);
                 }
             }).Start();
             return;
         }
 
         
-        public static void OnError (object o, string sender = "")
+        public static void LogError (object o, string sender = "")
         {
             if (o is ApiRequestException apiex && apiex.Message == "Request timed out")
                 return;

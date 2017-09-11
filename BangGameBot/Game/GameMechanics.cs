@@ -52,7 +52,7 @@ namespace BangGameBot
                 {
                     // ignored
                 }
-                Program.OnError(e);
+                Program.LogError(e);
             }
             finally
             {
