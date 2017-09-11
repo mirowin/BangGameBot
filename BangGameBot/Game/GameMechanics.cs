@@ -81,6 +81,7 @@ namespace BangGameBot
             Users.Shuffle();
             rolesToAssign.Shuffle();
             rolesToAssign.Shuffle();
+            rolesToAssign.Shuffle();
 
             if (Users.Count() - 1 != rolesToAssign.Count())
                 throw new Exception("Players count != roles to assign");
