@@ -109,7 +109,7 @@ namespace BangGameBot
             return;
         }
 
-        public void SendPlayerList(Player p, CallbackQuery q = null)
+        public void SendPlayerList(Player p, CallbackQuery q = null, bool expanded = false)
         {
             var text = "Players".ToBold() + ":\n";
             text += Users.Aggregate("", (s, pl) =>
@@ -119,8 +119,20 @@ namespace BangGameBot
                 pl.LivesString() +
                 (Players.Contains(pl) && Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
             );
-            var menu = GetPlayerMenu(p);
-            menu.Add(new[] { new InlineKeyboardCallbackButton("🗑Delete this message", "delete") });
+            List<InlineKeyboardCallbackButton[]> menu;
+            if (expanded)
+            {
+                menu = GetPlayerMenu(p);
+                menu.Add(new[] { new InlineKeyboardCallbackButton("🗑Delete this message", "delete") });
+            }
+            else
+            {
+                menu = new List<InlineKeyboardCallbackButton[]>() {new[]
+                {
+                    new InlineKeyboardCallbackButton("More info", "game|players|expanded"),
+                    new InlineKeyboardCallbackButton("🗑Delete this message", "delete")
+                }};
+            }
             if (q == null)
                 Bot.Send(text, p.Id, menu.ToKeyboard()).Wait();
             else
