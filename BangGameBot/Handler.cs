@@ -63,10 +63,10 @@ namespace BangGameBot
                     //add them to a game
                     if (Games.Any(x => x.Status == GameStatus.Joining))
                         //there should be only one game joining at a time, but...
-                        Games.Where(x => x.Status == GameStatus.Joining).OrderBy(x => x.Users.Count()).FirstOrDefault().AddPlayer(msg.From);
+                        Games.Where(x => x.Status == GameStatus.Joining).OrderBy(x => x.Users.Count()).FirstOrDefault().PlayerRequest(new Player(msg.From), Request.Join);
                     else
                         //create new game
-                        Games.Add(new Game(msg));
+                        Games.Add(new Game(new Player(msg.From)));
                     return;
                 case "leave":
                     if (Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
@@ -115,8 +115,6 @@ namespace BangGameBot
                     if (player != null)
                         player.HelpMode = playersettings.HelpMode;
                     return;
-                case "throw":
-                    throw new Exception("unz tanz");
                 default:
                     return;
             }
@@ -148,10 +146,13 @@ namespace BangGameBot
                 switch (args[1])
                 {
                     case "start":
-                        game.VoteStart(player);
+                        game.PlayerRequest(player, Request.VoteStart);
                         break;
                     case "leave":
-                        game.PlayerLeave(player, q);
+                        if (game.Status != GameStatus.Joining)
+                            game.LeaveGame(player, q);
+                        else
+                            game.PlayerRequest(player, Request.Leave, q);
                         break;
                     case "players":
                         game.SendPlayerList(player, args[2] == "new" ? null : q);

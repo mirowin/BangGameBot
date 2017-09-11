@@ -199,26 +199,20 @@ namespace BangGameBot
                 }
                 var menu = startinggame ? null : buttons.ToArray().ToSinglet().ToKeyboard();
 
-                try
-                {
-                    if (p.PlayerListMsg == null)
-                        p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
-                    else if (addingplayer)
-                    {
-                        Bot.Delete(p.PlayerListMsg).Wait();
-                        p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
-                    }
-                    else
-                        p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, menu).Result;
 
-                    if (startinggame)
-                        p.PlayerListMsg = null;
-                }
-                catch
+                if (p.PlayerListMsg == null)
+                    p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+                else if (addingplayer)
                 {
-                    try { if (p.PlayerListMsg != null) Bot.Delete(p.PlayerListMsg).Wait(); } catch { }
-                    try { p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result; } catch { }
+                    Bot.Delete(p.PlayerListMsg).Wait();
+                    p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
                 }
+                else if (!text.IsHTMLEqualTo(p.PlayerListMsg.Text))
+                    p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, menu).Result;
+
+                if (startinggame)
+                    p.PlayerListMsg = null;
+
             }
             return;
         }

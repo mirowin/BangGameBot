@@ -63,4 +63,9 @@
         DiscardBang
     }  
 
+    public enum Request
+    {
+        Join, VoteStart, Leave
+    }
+
 }
