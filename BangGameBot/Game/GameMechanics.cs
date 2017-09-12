@@ -977,12 +977,9 @@ namespace BangGameBot
                     return Dealer.Graveyard.Any();
                 case Character.SidKetchum:
                     if (s == Situation.PlayerDying)
-                    {
-                        if (player.Lives > 0)
-                            throw new InvalidOperationException("Sid Ketchum is doing his ability while living");
                         //regainable lives = beers count + other cards / 2 (2 non-beers = 1 life)
                         return player.CardsInHand.Count(x => x.Name == CardName.Beer) + player.CardsInHand.Count(x => x.Name != CardName.Beer) / 2 > -player.Lives;
-                    }
+                    
                     else
                         return player.Lives < player.MaxLives;
                 default:
