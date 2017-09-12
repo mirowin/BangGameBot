@@ -44,22 +44,27 @@ namespace BangGameBot
 
         private void JoiningPhase()
         {
-            double emptytime = 0;
+            int inactivetime = 0;
             while (Status == GameStatus.Joining)
             {
-                if (emptytime > 300)
+                if (inactivetime > 600)
                 {
+                    Users?.ForEach(u =>
+                    {
+                        if (u.PlayerListMsg != null)
+                            Bot.Edit("Inactive game, cancelling...", u.PlayerListMsg).Wait();
+                        Bot.Send("The game was cancelled for inactivity. If you still want to play, please start a /newgame.", u.Id);
+                    });
                     this.Dispose();
                     return;
                 }
                 if (!_requests.Any())
                 {
-                    if (!Users.Any())
-                        emptytime += 0.25;
-                    Task.Delay(250).Wait();
+                    inactivetime += 1;
+                    Task.Delay(1000).Wait();
                     continue;
                 }
-                emptytime = 0;
+                inactivetime = 0;
                 var request = _requests.Dequeue();
                 var p = request.Item1.Item1;
                 var q = request.Item1.Item2;
@@ -127,10 +132,9 @@ namespace BangGameBot
         {
             Status = GameStatus.Ending;
             Handler.Games.Remove(this);
-            Users.Clear();
+            Users?.Clear();
             Users = null;
-            if (Players != null)
-                Players.Clear();
+            Players?.Clear();
             Players = null;
             Dealer = null;
             return;
