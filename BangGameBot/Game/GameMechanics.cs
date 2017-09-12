@@ -417,6 +417,12 @@ namespace BangGameBot
                             Tell($"You take {chosencard.GetDescription()} in hand.", player, textforothers: $"{player.Name} took {chosencard.GetDescription()} in hand");
                             Dealer.DrawFromPeeked(player, chosencard);
                         }
+                        if (Dealer.PeekedCards.Any())
+                        {
+                            TellEveryone("Some players left, so " + string.Join(", ", Dealer.PeekedCards.Select(x => x.GetDescription())) + " were discarded.");
+                            AddToHelp(Dealer.PeekedCards);
+                            Dealer.DiscardPeekedCards();
+                        }
                         break;
                     case CardName.Indians:
                         UseIndians(_currentPlayer);

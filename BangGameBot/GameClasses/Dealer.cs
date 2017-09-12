@@ -117,6 +117,13 @@ namespace BangGameBot
             p.Cards.Add(c);
             return;
         }
+
+        public void DiscardPeekedCards()
+        {
+            foreach (var c in PeekedCards)
+                SendToGraveyard(c);
+            PeekedCards.Clear();
+        }
         
         /// <summary>
         /// Puts permcard on table in front of player. If a card is returned, it means the permcard was a weapon and the returned card is the discarded weapon.
