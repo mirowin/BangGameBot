@@ -120,6 +120,15 @@ namespace BangGameBot
                         "\nAt any time, you can get info for any card by simply typing @BangGameBot and the card you're searching for.";
                     Bot.Api.SendTextMessageAsync(chatid, reply, ParseMode.Html);
                     return;
+                case "ping":
+                    var ping = DateTime.Now - msg.Date;
+                    var sendtime = DateTime.Now;
+                    reply = "Time to receive your message: " + ping.ToString(@"mm\:ss\.fff");
+                    var result = Bot.Send(reply, chatid).Result;
+                    ping = DateTime.Now - sendtime;
+                    reply += Environment.NewLine + "Time to send this message: " + ping.ToString(@"mm\:ss\.fff");
+                    Bot.Edit(reply, result);
+                    break;
                 case "helpmode":
                     PlayerSettings playersettings;
                     using (var db = new LiteDatabase(Program.LiteDBConnectionString))
