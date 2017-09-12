@@ -25,7 +25,6 @@ namespace BangGameBot
             //get the command
             var text = msg.Text.Replace("@" + Bot.Me.Username, "").TrimStart('/', '!');
             var cmd = text.Contains(' ') ? text.Substring(0, text.IndexOf(' ')) : text;
-            cmd.ToLower();
             text = text.Replace(cmd, "").Trim();
 
             if (cmd.StartsWith("help_"))
@@ -44,6 +43,7 @@ namespace BangGameBot
                 return;
             }
 
+            cmd = cmd.ToLower();
             string reply;
             switch (cmd)
             {
