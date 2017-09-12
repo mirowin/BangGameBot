@@ -9,8 +9,7 @@ namespace BangGameBot
 {
     public partial class Game : IDisposable
     {
-        public static readonly int MinPlayers = 4;
-        public static readonly int MaxPlayers = 7;
+        
         public GameStatus Status = GameStatus.Joining;
         public int Id = 1;
         public List<Player> Users = new List<Player>(); // The players that started the game 
@@ -47,7 +46,7 @@ namespace BangGameBot
             int inactivetime = 0;
             while (Status == GameStatus.Joining)
             {
-                if (inactivetime > 600)
+                if (inactivetime > 30 * GameSettings.InactiveMinutes)
                 {
                     Users?.ForEach(u =>
                     {
@@ -84,7 +83,7 @@ namespace BangGameBot
                     return;
                 if (!Users.Any())
                     continue;
-                var startinggame = Users.All(x => x.VotedToStart);
+                var startinggame = Users.All(x => x.VotedToStart) || Users.Count() == GameSettings.MaxPlayers;
                 if (startinggame)
                     Status = GameStatus.Initialising;
                 UpdateJoinMessages(startinggame, request.Item2 != Request.VoteStart);
@@ -108,7 +107,7 @@ namespace BangGameBot
                 this.Dispose();
                 return;
             }
-            if (Users.Count < MinPlayers)
+            if (Users.Count() < GameSettings.MinPlayers)
                 Users.ForEach(x => x.VotedToStart = false);
 
             return;
@@ -138,6 +137,44 @@ namespace BangGameBot
             Players = null;
             Dealer = null;
             return;
+        }
+
+
+        private static class GameSettings
+        {
+            public static readonly int InactiveMinutes = 10;
+            public static readonly int MinPlayers = 4;
+            public static readonly int MaxPlayers = 7;
+
+            //TIMES
+
+            //bool choices
+            public static readonly int AbilityPhaseOneTime = 45;
+            public static readonly int SidKetchumAbilityPhaseThreeTime = 30;
+            public static readonly int ChooseUseBarrelTime = 30;
+            
+            //misses
+            public static readonly int MissGatlingTime = 45;
+            public static readonly int MissBangTime = 45;
+            public static readonly int MissDuelTime = 45;
+            public static readonly int MissIndiansTime = 45;
+            public static readonly int LethalHitTime = 45;
+
+            //target choices
+            public static readonly int ChooseBangTargetTime = 60;
+            public static readonly int ChooseJailTargetTime = 60;
+            public static readonly int ChooseDuelTargetTime = 60;
+            public static readonly int ChoosePanicTargetTime = 60;
+
+            //card choices
+            public static readonly int PhaseTwoTime = 120;
+            public static readonly int SidKetchumAbilityTime = 60;
+            public static readonly int GeneralStoreTime = 90;
+            public static readonly int PhaseThreeTime = 60;
+            public static readonly int ChooseCardToStealTime = 75;
+            public static readonly int SidKetchumLethalAbilityTime = 45;
+
+            public static readonly int LuckyDukeAbilityTime = 45;
         }
     }
 }

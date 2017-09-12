@@ -195,7 +195,7 @@ namespace BangGameBot
                     Tell("Choose the card to put back into the deck.", _currentPlayer);
                     AddToHelp(_currentPlayer, cardsdrawn);
                     SendMessages(_currentPlayer, cardsdrawn.MakeMenu(_currentPlayer));
-                    var cardchosen = (WaitForChoice(_currentPlayer)?.CardChosen ?? DefaultChoice.ChooseCardFrom(cardsdrawn));
+                    var cardchosen = (WaitForChoice(_currentPlayer, GameSettings.AbilityPhaseOneTime)?.CardChosen ?? DefaultChoice.ChooseCardFrom(cardsdrawn));
                     Dealer.PutIntoDeck(_currentPlayer, cardchosen);
                     Tell($"You put {cardchosen.GetDescription()} back at the top of the deck.", _currentPlayer, CardName.None, Character.KitCarlson, textforothers: $"{_currentPlayer.Name} put a card back at the top the deck");
                     Tell("", _currentPlayer, cardchosen.Name);
@@ -222,7 +222,7 @@ namespace BangGameBot
                         SendMessages(_currentPlayer, MakeBoolMenu("Use ability", "Draw from deck"));
 
                         //now let's see what they chose
-                        if (WaitForChoice(_currentPlayer)?.ChoseYes ?? DefaultChoice.UseAbilityPhaseOne)
+                        if (WaitForChoice(_currentPlayer, GameSettings.AbilityPhaseOneTime)?.ChoseYes ?? DefaultChoice.UseAbilityPhaseOne)
                         {
                             if (_currentPlayer.Character == Character.JesseJones)
                                 UsePanicOrCatBalou(_currentPlayer); //steal from a player
@@ -268,7 +268,7 @@ namespace BangGameBot
                 SendMessages(_currentPlayer, menu);
 
                 //see what they chose
-                var choice = WaitForChoice(_currentPlayer);
+                var choice = WaitForChoice(_currentPlayer, GameSettings.PhaseTwoTime);
                 if (choice == null) //afk
                     return; 
                 if (choice.ChoseYes == true) //discard cards
@@ -280,11 +280,11 @@ namespace BangGameBot
                     //it was sid ketchum! he wants to discard two cards and regain one life point.
                     Tell($"Choose the cards to discard.", _currentPlayer);
                     SendMessages(_currentPlayer, _currentPlayer.CardsInHand.MakeMenu(_currentPlayer));
-                    var chosencard = WaitForChoice(_currentPlayer)?.CardChosen ?? _currentPlayer.ChooseCardFromHand();
+                    var chosencard = WaitForChoice(_currentPlayer, GameSettings.SidKetchumAbilityTime)?.CardChosen ?? _currentPlayer.ChooseCardFromHand();
                     Discard(_currentPlayer, chosencard);
                     Tell($"You discarded {chosencard.GetDescription()}. Select another card to discard.", _currentPlayer, chosencard.Name);
                     SendMessages(_currentPlayer, _currentPlayer.CardsInHand.MakeMenu(_currentPlayer));
-                    var secondchosencard = WaitForChoice(_currentPlayer)?.CardChosen ?? _currentPlayer.ChooseCardFromHand();
+                    var secondchosencard = WaitForChoice(_currentPlayer, GameSettings.SidKetchumAbilityTime)?.CardChosen ?? _currentPlayer.ChooseCardFromHand();
                     Discard(_currentPlayer, secondchosencard);
                     Tell(
                         $"You discarded {secondchosencard.GetDescription()}, and regained a life point.",
@@ -312,7 +312,7 @@ namespace BangGameBot
                         {
                             Tell($"Choose a player to put in jail.", _currentPlayer, CardName.Jail);
                             SendMessages(_currentPlayer, possiblechoices.Select(x => new[] { new InlineKeyboardCallbackButton(x.Name, $"game|player|{x.Id}") }));
-                            chosenplayer = WaitForChoice(_currentPlayer)?.PlayerChosen ?? possiblechoices.Random();
+                            chosenplayer = WaitForChoice(_currentPlayer, GameSettings.ChooseJailTargetTime)?.PlayerChosen ?? possiblechoices.Random();
                         }
                         chosenplayer.StealFrom(_currentPlayer, cardchosen);
                         Dealer.PutPermCardOnTable(chosenplayer, cardchosen);
@@ -375,7 +375,7 @@ namespace BangGameBot
                         foreach (var p in candiscard)
                         {
                             var task = new Task(() => {
-                                var discarded = WaitForChoice(p)?.CardChosen;
+                                var discarded = WaitForChoice(p, GameSettings.MissGatlingTime)?.CardChosen;
                                 Tell("You chose to " + (discarded != null ? $"use {discarded.GetDescription()}." : "lose a life point.") + "\nWaiting for the other players to choose...", p);
                                 SendMessage(p);
                             });
@@ -413,7 +413,7 @@ namespace BangGameBot
                             if (player.IsDead) continue;
                             Tell("Choose the card to take in hand.", player);
                             SendMessages(player, Dealer.PeekedCards.MakeMenu(player));
-                            var chosencard = WaitForChoice(player)?.CardChosen ?? DefaultChoice.ChooseCardFrom(Dealer.PeekedCards);
+                            var chosencard = WaitForChoice(player, GameSettings.GeneralStoreTime)?.CardChosen ?? DefaultChoice.ChooseCardFrom(Dealer.PeekedCards);
                             Tell($"You take {chosencard.GetDescription()} in hand.", player, textforothers: $"{player.Name} took {chosencard.GetDescription()} in hand");
                             Dealer.DrawFromPeeked(player, chosencard);
                         }
@@ -462,7 +462,7 @@ namespace BangGameBot
                 if (_currentPlayer.CardsInHand.Count() <= _currentPlayer.Lives)
                     menu = menu.AddYesButton("End of turn");
                 SendMessages(_currentPlayer, menu);
-                var choice = WaitForChoice(_currentPlayer);
+                var choice = WaitForChoice(_currentPlayer, GameSettings.PhaseThreeTime);
                 //yes = end of turn
                 if (choice?.ChoseYes ?? false)
                     break;
@@ -484,7 +484,7 @@ namespace BangGameBot
                 {
                     Tell("You discarded two cards. Do you want to use your ability and regain one life point?", _currentPlayer, character: Character.SidKetchum);
                     SendMessages(_currentPlayer, MakeBoolMenu("Yes", "No"));
-                    if (WaitForChoice(_currentPlayer)?.ChoseYes ?? DefaultChoice.UseAblityPhaseThree)
+                    if (WaitForChoice(_currentPlayer, GameSettings.SidKetchumAbilityPhaseThreeTime)?.ChoseYes ?? DefaultChoice.UseAblityPhaseThree)
                         _currentPlayer.AddLives(1);
                 }
             }
@@ -511,7 +511,7 @@ namespace BangGameBot
             {
                 Tell("Choose a player to shoot.", attacker);
                 SendMessages(attacker, possiblechoices.Select(x => (new[] { new InlineKeyboardCallbackButton(x.Name, $"game|player|{x.Id}") })));
-                target = WaitForChoice(attacker)?.PlayerChosen ?? DefaultChoice.ChoosePlayer(possiblechoices);
+                target = WaitForChoice(attacker, GameSettings.ChooseBangTargetTime)?.PlayerChosen ?? DefaultChoice.ChoosePlayer(possiblechoices);
                 Tell($"You chose to shoot {target.Name}.", attacker);
             }
 
@@ -552,7 +552,7 @@ namespace BangGameBot
                 {
                     Tell("You have a Missed! card. You have the possibility to miss the shoot!", target, character: Character.CalamityJanet.OnlyIfMatches(target));
                     SendMessages(target, MakeCardsInHandMenu(target, Situation.PlayerShot).AddYesButton("Lose a life point"));
-                    var choice = WaitForChoice(target);
+                    var choice = WaitForChoice(target, GameSettings.MissBangTime);
                     var cardchosen = choice?.CardChosen;
                     if (cardchosen != null)
                     {
@@ -590,7 +590,7 @@ namespace BangGameBot
 
             SendMessages(target, MakeBoolMenu(jourdounnais ? "Use ability" : "Use Barrel", candefend ? "Defend otherwise" : "Lose a life point"));
 
-            var choice = WaitForChoice(target)?.ChoseYes ?? DefaultChoice.UseBarrel;
+            var choice = WaitForChoice(target, GameSettings.ChooseUseBarrelTime)?.ChoseYes ?? DefaultChoice.UseBarrel;
             if (!choice)
                 return false;
 
@@ -634,7 +634,7 @@ namespace BangGameBot
             {
                 Tell("Choose a player to challenge to duel.", curplayer, CardName.Duel);
                 SendMessages(curplayer, possiblechoices.Select(x => (new[] { new InlineKeyboardCallbackButton(x.Name, $"game|player|{x.Id}") })));
-                target = WaitForChoice(curplayer)?.PlayerChosen ?? DefaultChoice.ChoosePlayer(possiblechoices);
+                target = WaitForChoice(curplayer, GameSettings.ChooseDuelTargetTime)?.PlayerChosen ?? DefaultChoice.ChoosePlayer(possiblechoices);
                 Tell($"You chose to challenge {target.Name} to duel.", curplayer, CardName.Duel);
             }
 
@@ -648,7 +648,7 @@ namespace BangGameBot
                 {
                     Tell("You may discard a Bang! card, or lose a life point.", player, character: player.Character == Character.CalamityJanet ? Character.CalamityJanet : Character.None);
                     SendMessages(player, MakeCardsInHandMenu(player, Situation.DiscardBang).AddYesButton("Lose a life point"));
-                    WaitForChoice(player);
+                    WaitForChoice(player, GameSettings.MissDuelTime);
                     if (player.Choice?.CardChosen != null)
                     {
                         if (player.Choice.CardChosen.Name != CardName.Bang && (player.Choice.CardChosen.Name != CardName.Missed || player.Character != Character.CalamityJanet))
@@ -677,7 +677,7 @@ namespace BangGameBot
             foreach (var p in candiscard)
             {
                 var task = new Task(() => {
-                    var choice = WaitForChoice(p)?.CardChosen;
+                    var choice = WaitForChoice(p, GameSettings.MissIndiansTime)?.CardChosen;
                     Tell("You chose to " + (choice != null ? "discard a Bang! card." : "lose a life point.") + "\nWaiting for the other players to choose...", p);
                     SendMessage(p);
                 });
@@ -739,7 +739,7 @@ namespace BangGameBot
                     buttonslist.Add(new[] { new InlineKeyboardCallbackButton(p.Name + $"({p.CardsInHand.Count()})", $"game|player|{p.Id}") });
                 SendMessages(curplayer, buttonslist);
 
-                playerchosen = WaitForChoice(curplayer)?.PlayerChosen ?? DefaultChoice.ChoosePlayer(possiblechoices);
+                playerchosen = WaitForChoice(curplayer, GameSettings.ChoosePanicTargetTime)?.PlayerChosen ?? DefaultChoice.ChoosePlayer(possiblechoices);
             }
             else
                 playerchosen = possiblechoices.First(); //if possiblechoices.Any() is false, this is gonna throw an exception I like.
@@ -765,7 +765,7 @@ namespace BangGameBot
                 SendMessages(curplayer, buttonslist);
 
                 //see what they chose
-                var choice = WaitForChoice(curplayer);
+                var choice = WaitForChoice(curplayer, GameSettings.ChooseCardToStealTime);
                 //yes = card from hand
                 if (!choice?.ChoseYes ?? true)
                     chosencard = choice?.CardChosen ?? DefaultChoice.ChooseCard;
@@ -852,7 +852,7 @@ namespace BangGameBot
                 }
                 menu = menu.AddYesButton("Resign");
                 SendMessages(target, menu);
-                var choice = WaitForChoice(target);
+                var choice = WaitForChoice(target, GameSettings.LethalHitTime);
                 if (choice == null || choice.ChoseYes == true)
                     break;
                 else if (choice.CardChosen.Name == CardName.Beer)
@@ -869,7 +869,7 @@ namespace BangGameBot
                     Tell($"You discarded {choice.CardChosen.GetDescription()}. Select another card to discard.", target, choice.CardChosen.Name);
                     menu = target.CardsInHand.MakeMenu(target).AddYesButton("Resign");
                     SendMessage(target, menu);
-                    var secondchoice = WaitForChoice(target);
+                    var secondchoice = WaitForChoice(target, GameSettings.SidKetchumLethalAbilityTime);
                     if (secondchoice == null || secondchoice.ChoseYes == true)
                         break;
                     else
@@ -1075,7 +1075,7 @@ namespace BangGameBot
                 SendMessages(player, cards.MakeMenu(player));
 
                 //tell people the two cards
-                var cardchosen = WaitForChoice(player).CardChosen ?? DefaultChoice.ChooseCardFrom(cards);
+                var cardchosen = WaitForChoice(player, GameSettings.LuckyDukeAbilityTime).CardChosen ?? DefaultChoice.ChooseCardFrom(cards);
                 var carddiscarded = cards.First(x => x != cardchosen);
                 Tell($"You choose {cardchosen.GetDescription()} and discard {carddiscarded.GetDescription()}.", player, character: Character.LuckyDuke, textforothers: $"{player.Name} chose {cardchosen.GetDescription()} and discarded {carddiscarded.GetDescription()}.");
                 

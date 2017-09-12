@@ -121,14 +121,14 @@ namespace BangGameBot
                     Bot.Api.SendTextMessageAsync(chatid, reply, ParseMode.Html);
                     return;
                 case "helpmode":
-                    Settings playersettings;
+                    PlayerSettings playersettings;
                     using (var db = new LiteDatabase(Program.LiteDBConnectionString))
                     {
-                        var settings = db.GetCollection<Settings>("settings");
+                        var settings = db.GetCollection<PlayerSettings>("settings");
                         playersettings = settings.FindOne(x => x.TelegramId == userid);
                         if (playersettings == null)
                         {
-                            playersettings = new Settings { TelegramId = userid, HelpMode = false };
+                            playersettings = new PlayerSettings { TelegramId = userid, HelpMode = false };
                             settings.Insert(playersettings);
                         }
                         playersettings.HelpMode = !playersettings.HelpMode;

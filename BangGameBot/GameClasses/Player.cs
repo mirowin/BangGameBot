@@ -8,13 +8,13 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace BangGameBot
 {
-    public class Settings
+    public class PlayerSettings
     {
         public int Id { get; set; }
         public long TelegramId { get; set; }
         public bool HelpMode { get; set; }
 
-        public Settings()
+        public PlayerSettings()
         {
         }
     }
@@ -67,11 +67,11 @@ namespace BangGameBot
             //set helpmode
             using (var db = new LiteDatabase(Program.LiteDBConnectionString))
             {
-                var settings = db.GetCollection<Settings>("settings");
+                var settings = db.GetCollection<PlayerSettings>("settings");
                 var playersettings = settings.FindOne(x => x.TelegramId == Id);
                 if (playersettings == null)
                 {
-                    playersettings = new Settings { TelegramId = Id, HelpMode = false };
+                    playersettings = new PlayerSettings { TelegramId = Id, HelpMode = false };
                     settings.Insert(playersettings);
                 }
 

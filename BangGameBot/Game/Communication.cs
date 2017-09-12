@@ -197,7 +197,7 @@ namespace BangGameBot
             foreach (var p in Users) //now create the message for each player
             {
                 var text = starttext;
-                if (Users.Count() >= MinPlayers && !startinggame)
+                if (Users.Count() >= GameSettings.MinPlayers && !startinggame)
                     text += p.VotedToStart ? "\nClick the Unvote button to remove your vote." : "\nClick the Start button to vote to start the game.";
                 text += "\n\n" + playerlist;
 
@@ -206,7 +206,7 @@ namespace BangGameBot
                 if (!startinggame)
                 {
                     buttons = new List<InlineKeyboardCallbackButton>() { new InlineKeyboardCallbackButton("Leave", $"game|leave") };
-                    if (Users.Count() >= MinPlayers)
+                    if (Users.Count() >= GameSettings.MinPlayers)
                         buttons.Add(new InlineKeyboardCallbackButton(p.VotedToStart ? "Unvote" : "Start", $"game|start"));
                 }
                 var menu = startinggame ? null : buttons.ToArray().ToSinglet().ToKeyboard();
@@ -229,9 +229,8 @@ namespace BangGameBot
             return;
         }
         
-        private Choice WaitForChoice(Player p)
+        private Choice WaitForChoice(Player p, int maxseconds)
         {
-            int maxseconds = int.MaxValue; //TODO
             p.Choice = null;
             var timer = 0;
             while (p.Choice == null && timer < maxseconds && !p.HasLeftGame)
