@@ -46,7 +46,7 @@ namespace BangGameBot
             int inactivetime = 0;
             while (Status == GameStatus.Joining)
             {
-                if (inactivetime > 30 * GameSettings.InactiveMinutes)
+                if (inactivetime > 60 * GameSettings.InactiveMinutes)
                 {
                     Users?.ForEach(u =>
                     {
