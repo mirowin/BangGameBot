@@ -386,9 +386,9 @@ namespace BangGameBot
                         while (tasks.Any(x => !x.IsCompleted))
                             Task.Delay(1000).Wait();
                         
-                        for (var i = 1; i < Players.Count(); i++)
+                        for (var i = 1; i < Users.Count(); i++)
                         {
-                            var target = Players[(i + Turn) % Players.Count()];
+                            var target = Users[(i + Turn) % Users.Count()];
                             if (target.IsDead) continue;
                             var discarded = target.Choice?.CardChosen;
                             if (candiscard.Contains(target) && discarded != null)
@@ -409,9 +409,9 @@ namespace BangGameBot
                         AddToHelp(Dealer.PeekedCards);
                         SendMessages();
 
-                        for (var i = 0; i < Players.Count(); i++)
+                        for (var i = 0; i < Users.Count(); i++)
                         {
-                            var player = Players[(i + Turn) % Players.Count()];
+                            var player = Users[(i + Turn) % Users.Count()];
                             if (player.IsDead) continue;
                             Card chosencard;
                             if (Dealer.PeekedCards.Count() > 1)
@@ -713,14 +713,14 @@ namespace BangGameBot
             while (tasks.Any(x => !x.IsCompleted))
                 Task.Delay(1000).Wait();
             
-            for (var i = 1; i < Players.Count(); i++)
+            for (var i = 1; i < Users.Count(); i++)
             {
-                var p = Players[(Turn + i) % Players.Count()];
+                var p = Users[(Turn + i) % Users.Count()];
                 if (p.IsDead) continue;
                 if (p.Choice?.CardChosen != null) // discarded
                 {
                     if (p.Choice.CardChosen.Name != CardName.Bang && (p.Choice.CardChosen.Name != CardName.Missed || p.Character != Character.CalamityJanet))
-                        throw new Exception("The player was meant to discard a Bang! card. Card discarded instead was " + p.Choice.CardChosen.Name.GetString<CardName>());
+                        throw new Exception($"The player was meant to discard a Bang! card. {p.Name} discarded instead " + p.Choice.CardChosen.Name.GetString<CardName>());
                     Tell($"You discarded {p.Choice.CardChosen.GetDescription()}.", p, p.Choice.CardChosen.Name, textforothers: $"{p.Name} discarded {p.Choice.CardChosen.GetDescription()}");
                     Discard(p, p.Choice.CardChosen);
 
