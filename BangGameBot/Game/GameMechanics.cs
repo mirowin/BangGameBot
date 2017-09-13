@@ -977,7 +977,7 @@ namespace BangGameBot
             else if (AlivePlayers.All(x => x.Role == Role.Renegade))
             {
                 finalmsg = $"The Sheriff has died! The Renegade {AlivePlayers.First().Name} has won!";
-                AlivePlayers.First().Won = true
+                AlivePlayers.First().Won = true;
             }
             else if (!AlivePlayers.Any(x => x.Role == Role.Outlaw || x.Role == Role.Renegade))
             {
