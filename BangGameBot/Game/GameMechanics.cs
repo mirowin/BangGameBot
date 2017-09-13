@@ -476,9 +476,15 @@ namespace BangGameBot
                 var cardchosen = choice?.CardChosen ?? DefaultChoice.ChooseCard;
                 if (cardchosen != null || discard) //even if they are afk they need to discard anyway
                 {
-                    var card = Discard(_currentPlayer, cardchosen);
+                    var card = Dealer.Discard(_currentPlayer, cardchosen);
                     var desc = card.GetDescription();
                     Tell($"You discarded {desc}", _currentPlayer, card.Name, textforothers: $"{_currentPlayer.Name} discarded {desc}");
+                    if (_currentPlayer.Character == Character.SuzyLafayette && _currentPlayer.CardsInHand.Count() == 0)
+                    {
+                        DrawCards(_currentPlayer, 1);
+                        TellEveryone(character: Character.SuzyLafayette);
+                    }
+
                 }
                 else
                     break;
@@ -660,8 +666,8 @@ namespace BangGameBot
                     {
                         if (player.Choice.CardChosen.Name != CardName.Bang && (player.Choice.CardChosen.Name != CardName.Missed || player.Character != Character.CalamityJanet))
                             throw new Exception("The player was meant to discard a Bang! card.");
-                        Discard(player, player.Choice.CardChosen);
                         Tell($"You discarded {player.Choice.CardChosen.GetDescription()}.", player, player.Choice.CardChosen.Name, textforothers: $"{player.Name} discarded {player.Choice.CardChosen.GetDescription()}");
+                        Discard(player, player.Choice.CardChosen);
                         continue;
                     }
                 }
@@ -702,8 +708,9 @@ namespace BangGameBot
                 {
                     if (p.Choice.CardChosen.Name != CardName.Bang && (p.Choice.CardChosen.Name != CardName.Missed || p.Character != Character.CalamityJanet))
                         throw new Exception("The player was meant to discard a Bang! card.");
-                    Discard(p, p.Choice.CardChosen);
                     Tell($"You discarded {p.Choice.CardChosen.GetDescription()}.", p, p.Choice.CardChosen.Name, textforothers: $"{p.Name} discarded {p.Choice.CardChosen.GetDescription()}");
+                    Discard(p, p.Choice.CardChosen);
+
                 }
                 else
                 {
@@ -865,9 +872,8 @@ namespace BangGameBot
                 else if (choice.CardChosen.Name == CardName.Beer)
                 {
                     target.AddLives(1);
-                    Discard(target, choice.CardChosen);
                     Tell($"You used {choice.CardChosen.GetDescription()}, and regained one life point.", target, choice.CardChosen.Name, textforothers: $"{target.Name} used {choice.CardChosen.GetDescription()}, and regained one life point!");
-
+                    Discard(target, choice.CardChosen);
                 }
                 else if (target.Character == Character.SidKetchum)
                 //this should ALWAYS be sid ketchum...
