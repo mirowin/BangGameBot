@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -25,7 +28,8 @@ namespace BangGameBot
         public static List<Game> Games = new List<Game>();
 
         public static void Main() {
-            Console.WriteLine("Successfully connected to @" + Bot.Me.Username);
+            Console.Title = "Bang! @" + Bot.Me.Username;
+            new Task(() => MonitorUpdater()).Start();
 
             //handle updates
             Bot.Api.OnMessage += Bot_OnMessage;
@@ -41,6 +45,7 @@ namespace BangGameBot
             new ManualResetEvent(false).WaitOne();
         }
 
+        
         static void Bot_OnMessage(object sender, MessageEventArgs e)
         {
             var msg = e.Message;
@@ -137,7 +142,21 @@ namespace BangGameBot
             }
             return;
         }
-        
+
+        private static void MonitorUpdater()
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.SetCursorPosition(0, 0);
+                Console.WriteLine($"Bang! v{FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)}");
+                Console.WriteLine($"Current total games: {Games.Count}");
+                Console.WriteLine($"Current running games: {Games.Count(x => x.Status != GameStatus.Joining)}");
+
+                Task.Delay(30000).Wait();
+            }
+        }
+
     }
 
 
