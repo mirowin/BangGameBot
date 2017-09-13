@@ -149,11 +149,11 @@ namespace BangGameBot
             {
                 Console.Clear();
                 Console.SetCursorPosition(0, 0);
-                Console.WriteLine($"Bang! v{FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)}");
+                Console.WriteLine($"Bang! v{string.Join(".", FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion.Split('.').Take(2))}");
                 Console.WriteLine($"Current total games: {Games.Count}");
                 Console.WriteLine($"Current running games: {Games.Count(x => x.Status != GameStatus.Joining)}");
 
-                Task.Delay(30000).Wait();
+                Task.Delay(10000).Wait();
             }
         }
 
