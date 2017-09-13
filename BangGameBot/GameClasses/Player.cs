@@ -24,7 +24,7 @@ namespace BangGameBot
         //USER
         public long Id { get; }
         public string Name { get; }
-        public User TelegramUser { get; }
+        //public User TelegramUser { get; }
 
         public bool HelpMode;
 
@@ -60,7 +60,7 @@ namespace BangGameBot
 
         public Player(User u)
         {
-            TelegramUser = u;
+            //TelegramUser = u;
             Id = u.Id;
             Name = (u.FirstName.Length < 50 ? u.FirstName : u.FirstName.Substring(0, 50) + "...").FormatHTML();
 
