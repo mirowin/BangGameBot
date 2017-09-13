@@ -440,6 +440,7 @@ namespace BangGameBot
                         DrawCards(_currentPlayer, 3);
                         break;
                 }
+                if (Status == GameStatus.Ending) return;
                 SendMessages();
             }
             return;
