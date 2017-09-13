@@ -203,6 +203,72 @@ namespace BangGameBot
             return;
         }
         
+        private void NotifyRoles()
+        {
+            foreach (var p in Users)
+            {
+                string msg;
+                
+                //role
+                switch (p.Role)
+                {
+                    case Role.Sheriff:
+                        msg = "You are the <b>Sheriff</b>! You get one more life point than your character has. You have to kill all the Outlaws and the Renegade!";
+                        if (Users.Count() >= 7)
+                            msg += " But be careful not to hit your two Deputies... they are your allies!";
+                        else if (Users.Count() >= 5)
+                            msg += " But be careful not to hit your Deputy... he is your ally!";
+                        msg += "\nRemember you are the only role publicly known. All other roles are covered.";
+                        break;
+                    case Role.Outlaw:
+                        msg = "You are an <b>Outlaw</b>! You have to kill the Sheriff before the others kill you!";
+                        if (Users.Count() >= 6)
+                            msg += " Note that there are other two Outlaws that share the same goal as you!";
+                        else
+                            msg += " Note that there is another Outlaw that shares the same goal as you!";
+                        break;
+                    case Role.Renegade:
+                        msg = "You are the <b>Renegade</b>! You have to be the last one standing! Don't let the Outlaws kill the Sheriff and win!";
+                        break;
+                    case Role.DepSheriff:
+                        msg = "You are a <b>Deputy Sheriff</b>! You have to protect the Sheriff and kill all the Outlaws and the Renegade!";
+                        if (Users.Count() >= 7)
+                            msg += " But be careful not to hit the other Deputy... he is your ally!";
+                        break;
+                    default:
+                        throw new IndexOutOfRangeException("What role is that?");
+                }
+                if (p.Role != Role.Sheriff)
+                    msg += "\nRemember that only the Sheriff's role is publicly known (he is the first one to play, and is always on top in the players list). All other roles are covered.";
+
+                //speak about the character
+                var chardesc = Helpers.Cards.FirstOrDefault(x => x.Name.ToLower() == p.Character.GetString<Character>().ToLower()).Description;
+                CardName helpcard;
+                switch(p.Character)
+                {
+                    case Character.PaulRegret:
+                        helpcard = CardName.Mustang;
+                        break;
+                    case Character.Jourdounnais:
+                        helpcard = CardName.Barrel;
+                        break;
+                    case Character.RoseDoolan:
+                        helpcard = CardName.Scope;
+                        break;
+                    default:
+                        helpcard = CardName.None;
+                        break;
+                }
+
+                //tell everything (cards in hand too)
+                Tell(msg + "\n\n"
+                    + $"You have been given the character {p.Character.GetString<Character>()}.\n{chardesc}"
+                    + $"\n\nYou drew {string.Join(", ", p.CardsInHand.Select(x => x.GetDescription()))}", p, helpcard);
+                AddToHelp(p, p.CardsInHand);
+            }
+            SendMessages();
+            return;
+        }
         private void UpdateJoinMessages(bool startinggame = false, bool addingplayer = false)
         {
             //these are the same for all players.

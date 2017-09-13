@@ -136,7 +136,8 @@ namespace BangGameBot
         
         public static string MakeHelpString(List<CardName> cards, List<Character> chars)
         {
-            return cards.Aggregate("\n\n", (s, c) => s + $"/help_{Enum.GetName(typeof(CardName), c)}\n") + chars.Aggregate("", (s, c) => s + $"/help_{Enum.GetName(typeof(Character), c)}\n");
+            return cards.Aggregate("\n\n", (s, c) => s + $"/help_{Enum.GetName(typeof(CardName), c)}\n") +
+                chars.Aggregate("", (s, c) => s + $"/help_{Enum.GetName(typeof(Character), c)}\n");
         }
     }
 }

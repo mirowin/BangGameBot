@@ -21,6 +21,7 @@ namespace BangGameBot
                 AssignRoles();
                 AssignCharacters();
                 DealCards();
+                NotifyRoles();
                 Players = new List<Player>(Users);
                 while (Status != GameStatus.Ending)
                 {
