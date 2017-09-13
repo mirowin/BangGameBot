@@ -123,10 +123,10 @@ namespace BangGameBot
             var text = "Players".ToBold() + ":\n";
             text += Users.Aggregate("", (s, pl) =>
                 s +
-                (p.IsDead ? "" : p.DistanceSeen(pl, AlivePlayers).ToEmoji()) +
-                pl.Name + " - " + pl.Character.GetString<Character>() +
+                p.DistanceSeen(pl, AlivePlayers).ToEmoji() +
+                pl.Name.ToBold() + " - " + pl.Character.GetString<Character>() +
                 pl.LivesString() +
-                (Players.Contains(pl) && Turn == Players.IndexOf(pl) ? "👈" : "") + "\n"
+                (Turn == Users.IndexOf(pl) ? "👈" : "") + "\n"
             );
             List<InlineKeyboardCallbackButton[]> menu;
             if (expanded)
