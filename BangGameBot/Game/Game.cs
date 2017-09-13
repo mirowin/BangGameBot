@@ -113,10 +113,11 @@ namespace BangGameBot
             return;
         }
 
-        public void LeaveGame(Player p, CallbackQuery q)
+        public void LeaveGame(Player p, CallbackQuery q = null)
         {
             p.HasLeftGame = true;
-            Bot.Edit("You have left this game. Start a new one with /newgame.", q.Message).Wait();
+            if (q != null)
+                Bot.Edit("You have left this game. Start a new one with /newgame.", q.Message).Wait();
             if (Players.All(x => x.HasLeftGame))
             {
                 if (Watchers.Any())

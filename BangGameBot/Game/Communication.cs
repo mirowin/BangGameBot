@@ -96,8 +96,17 @@ namespace BangGameBot
                 Bot.EditMenu(null, p.CurrentMsg).Wait();
             if (menu == null)
                 throw new Exception("MENU IS NULL!");
-
-            p.CurrentMsg = Bot.Send(msg.Text, p.Id, menu.ToKeyboard()).Result;
+            try
+            {
+                p.CurrentMsg = Bot.Send(msg.Text, p.Id, menu.ToKeyboard()).Result;
+            }
+            catch(AggregateException e)
+            {
+                if (e.InnerException.Message.Contains("blocked by the user"))
+                    LeaveGame(p);
+                else
+                    throw;
+            }
             msg.Clear();
         }
         
