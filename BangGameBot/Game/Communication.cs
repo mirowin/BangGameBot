@@ -133,10 +133,18 @@ namespace BangGameBot
                     new InlineKeyboardCallbackButton("🗑Delete this message", "delete")
                 }};
             }
-            if (q == null)
-                Bot.Send(text, p.Id, menu.ToKeyboard()).Wait();
-            else
-                Bot.Edit(text, q.Message, menu.ToKeyboard()).Wait();
+            try
+            {
+                if (q == null)
+                    Bot.Send(text, p.Id, menu.ToKeyboard()).Wait();
+                else
+                    Bot.Edit(text, q.Message, menu.ToKeyboard()).Wait();
+            }
+            catch (AggregateException e)
+            {
+                if (!e.InnerExceptions.Any(x => x.Message.Contains("timed out")))
+                    throw;
+            }
         }
 
         private List<InlineKeyboardCallbackButton[]> GetPlayerMenu(Player p)
