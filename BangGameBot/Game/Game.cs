@@ -89,7 +89,7 @@ namespace BangGameBot
                 UpdateJoinMessages(startinggame, request.Item2 != Request.VoteStart);
             }
 
-
+            
             StartGame();
         }
 

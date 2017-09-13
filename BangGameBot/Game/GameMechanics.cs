@@ -31,6 +31,7 @@ namespace BangGameBot
                     if (_currentPlayer.IsDead) continue;
                     SendPlayerList();
                     CheckDynamiteAndJail();
+                    if (_currentPlayer.IsDead) continue;
                     if (!_currentPlayer.CardsOnTable.Any(x => x.Name == CardName.Jail))
                     {
                         PhaseOne();
@@ -250,7 +251,7 @@ namespace BangGameBot
             Status = GameStatus.PhaseTwo;
 
             bool firsttime = true;
-            while (_currentPlayer.CardsInHand.Count() > 0)
+            while (_currentPlayer.CardsInHand.Count() > 0 && !_currentPlayer.IsDead)
             {
                 //ask them what they want to do
                 Tell("Select the card you want to use.", _currentPlayer);
@@ -460,7 +461,7 @@ namespace BangGameBot
 
         private void PhaseThree()
         {
-            if (Status == GameStatus.Ending) return;
+            if (Status == GameStatus.Ending || !_currentPlayer.CardsInHand.Any()) return;
             Status = GameStatus.PhaseThree;
 
             bool firsttime = true;
