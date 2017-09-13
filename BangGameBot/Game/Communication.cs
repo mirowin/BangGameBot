@@ -264,8 +264,6 @@ namespace BangGameBot
                 case "card":
                     p.Choice = new Choice(choice.GetCard(this));
                     break;
-                case "playerinfo":
-                    
                 default:
                     throw new ArgumentOutOfRangeException();
             }

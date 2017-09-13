@@ -28,7 +28,7 @@ namespace BangGameBot
                 do
                 {
                     result = Program.R.Next(10000, 10000000);
-                } while (Handler.Games.Any(x => x.Id == result));
+                } while (Program.Games.Any(x => x.Id == result));
                 Id = result;
             }
             else
@@ -130,7 +130,7 @@ namespace BangGameBot
         public void Dispose()
         {
             Status = GameStatus.Ending;
-            Handler.Games.Remove(this);
+            Program.Games.Remove(this);
             Users?.Clear();
             Users = null;
             Players?.Clear();

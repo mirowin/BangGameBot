@@ -11,7 +11,6 @@ namespace BangGameBot
 {
     public static class Handler
     {
-        public static List<Game> Games = new List<Game>();
 
         public static void HandleMessage(Message msg)
         {
@@ -59,17 +58,17 @@ namespace BangGameBot
                     {
                         if (id != 1)
                         {
-                            var game = Games.FirstOrDefault(x => x.Status == GameStatus.Joining && x.Id == id);
+                            var game = Program.Games.FirstOrDefault(x => x.Status == GameStatus.Joining && x.Id == id);
                             if (game == null)
                                 Bot.Send("This game has expired. Please start a /newgame", chatid);
                             else if (game.Users.Any(x => x.Id == userid))
                                 Bot.Send("You are already in this game", chatid);
-                            else if ((Games.FirstOrDefault(x => x.Users.Any(u => u.Id == userid && !u.HasLeftGame))?.Id ?? id) != id)
+                            else if ((Program.Games.FirstOrDefault(x => x.Users.Any(u => u.Id == userid && !u.HasLeftGame))?.Id ?? id) != id)
                                 Bot.Send("You are already in a game. Please /leave the game to join this one.", chatid);
                             else
                                 game.PlayerRequest(new Player(msg.From), Request.Join);
                         }
-                        else if (Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
+                        else if (Program.Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
                         {
                             Bot.Send("You are already in a game. You can /leave it to start a new game.", chatid);
                             return;
@@ -81,7 +80,7 @@ namespace BangGameBot
                     break;
                 case "newgame":
                     //check if they are in a game
-                    if (Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
+                    if (Program.Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
                     {
                         Bot.Send("You are already in a game. You can /leave it to start a new game.", chatid);
                         return;
@@ -95,7 +94,7 @@ namespace BangGameBot
                     Bot.Send("Let's play Bang!", chatid, menu.ToKeyboard());
                     return;
                 case "leave":
-                    if (Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
+                    if (Program.Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
                     {
                         menu = new[]
                             {
@@ -146,7 +145,7 @@ namespace BangGameBot
                     Bot.Send("Help mode turned " + (playersettings.HelpMode ? "on" : "off"), chatid);
 
                     //change helpmode in game         
-                    var player = Games.FirstOrDefault(x => x.Users.Any(p => p.Id == userid && !p.HasLeftGame))?.Users.FirstOrDefault(x => x.Id == userid);
+                    var player = Program.Games.FirstOrDefault(x => x.Users.Any(p => p.Id == userid && !p.HasLeftGame))?.Users.FirstOrDefault(x => x.Id == userid);
                     if (player != null)
                         player.HelpMode = playersettings.HelpMode;
                     return;
@@ -170,7 +169,7 @@ namespace BangGameBot
             if (args[0] == "game" && args.Length >= 2)
             {
                 //they are in a game, it's a game command
-                var game = Games.FirstOrDefault(x => x.Users.Any(p => p.Id == userid && !p.HasLeftGame));
+                var game = Program.Games.FirstOrDefault(x => x.Users.Any(p => p.Id == userid && !p.HasLeftGame));
                 var player = game?.Users.FirstOrDefault(x => x.Id == userid);
                 if (player == null)
                 {
@@ -210,7 +209,7 @@ namespace BangGameBot
             switch (args[0])
             {
                 case "newgame":
-                    if (Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
+                    if (Program.Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
                     {
                         Bot.SendAlert(q, "You are already in a game. Please /leave the game to start a new one");
                         return;
@@ -224,7 +223,7 @@ namespace BangGameBot
                     else
                     {
                         var game = new Game(null);
-                        Games.Add(game);
+                        Program.Games.Add(game);
                         if (q.Message.Chat.Type == ChatType.Private)
                         {
                             Bot.Edit($"Share this link with your friends to let them join your game! http://t.me/{Bot.Me.Username}?start={game.Id}", q.Message).Wait();
@@ -243,7 +242,8 @@ namespace BangGameBot
                     Bot.SendAlert(q, card.Name + "\n" + card.Description);
                     return;
                 case "delete":
-                    Bot.Delete(q.Message);
+                    Bot.Delete(q.Message).Wait();
+                    Bot.SendAlert(q);
                     return;
             }
 
@@ -251,12 +251,12 @@ namespace BangGameBot
 
         private static void NewPublicGame(User u)
         {
-            if (Games.Any(x => x.Status == GameStatus.Joining && x.Id == 1))
+            if (Program.Games.Any(x => x.Status == GameStatus.Joining && x.Id == 1))
                 //there should be only one game joining at a time, but...
-                Games.Where(x => x.Status == GameStatus.Joining).OrderBy(x => x.Users.Count()).FirstOrDefault().PlayerRequest(new Player(u), Request.Join);
+                Program.Games.Where(x => x.Status == GameStatus.Joining).OrderBy(x => x.Users.Count()).FirstOrDefault().PlayerRequest(new Player(u), Request.Join);
             else
                 //create new game
-                Games.Add(new Game(new Player(u)));
+                Program.Games.Add(new Game(new Player(u)));
         }
 
         public static void HandleInlineQuery(InlineQuery q)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -20,6 +21,8 @@ namespace BangGameBot
         public static readonly long renyhp = 133748469;
         public static readonly DateTime StartTime = DateTime.UtcNow;
         public static readonly string LiteDBConnectionString = "BangDB.db";
+        
+        public static List<Game> Games = new List<Game>();
 
         public static void Main() {
             Console.WriteLine("Successfully connected to @" + Bot.Me.Username);
