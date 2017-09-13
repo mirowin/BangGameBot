@@ -44,6 +44,7 @@ namespace BangGameBot
         public Role Role;
         public Card Weapon = null;
         public bool HasLeftGame = false;
+        public bool Won = false;
 
         public List<Card> CardsOnTable
         {

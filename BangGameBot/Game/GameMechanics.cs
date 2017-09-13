@@ -969,9 +969,16 @@ namespace BangGameBot
         {
             var finalmsg = "";
             if (deadplayer.Role == Role.Sheriff && AlivePlayers.Any(x => x.Role == Role.Outlaw))
+            {
                 finalmsg = $"The Sheriff has died! The Outlaws " + string.Join(", ", Users.Where(x => x.Role == Role.Outlaw).Select(x => x.Name)).ToBold() + " have won!";
+                foreach (var p in Players.Where(x => x.Role == Role.Outlaw))
+                    p.Won = true;
+            }
             else if (AlivePlayers.All(x => x.Role == Role.Renegade))
+            {
                 finalmsg = $"The Sheriff has died! The Renegade {AlivePlayers.First().Name} has won!";
+                AlivePlayers.First().Won = true
+            }
             else if (!AlivePlayers.Any(x => x.Role == Role.Outlaw || x.Role == Role.Renegade))
             {
                 finalmsg = "The Renegade and the Outlaws have died!";
@@ -990,12 +997,20 @@ namespace BangGameBot
                     default:
                         throw new IndexOutOfRangeException($"There are {deputies.Count()} deputies.");
                 }
+                foreach (var d in deputies.Union(Users.Where(x => x.Role == Role.Sheriff)))
+                {
+                    d.Won = true;
+                }
             }
 
             if (String.IsNullOrEmpty(finalmsg))
                 return;
-
-            finalmsg += "\n\n<b>Players:</b>\n" + string.Join("\n", Users.Select(x => $"{x.Name.ToBold()} - {x.Role.GetString<Role>()}")); 
+            finalmsg += "\n\n<b>Players:</b>\n";
+            foreach (var x in Users)
+            {
+                var won = x.Won ? "Won" : "Lost";
+                finalmsg += $"\n{x.Name.ToBold()} - {x.Role.GetString<Role>()} - <i>{won}</i>";
+            }
             SendMessages();
             foreach (var p in Watchers)
                 Bot.Send(finalmsg, p.Id);
