@@ -956,20 +956,37 @@ namespace BangGameBot
         {
             var finalmsg = "";
             if (deadplayer.Role == Role.Sheriff && AlivePlayers.Any(x => x.Role == Role.Outlaw))
-                finalmsg = $"The Sheriff has died! The Outlaws " + string.Join(", ", Users.Where(x => x.Role == Role.Outlaw).Select(x => x.Name)) + " have won!";
+                finalmsg = $"The Sheriff has died! The Outlaws " + string.Join(", ", Users.Where(x => x.Role == Role.Outlaw).Select(x => x.Name)).ToBold() + " have won!";
             else if (AlivePlayers.All(x => x.Role == Role.Renegade))
                 finalmsg = $"The Sheriff has died! The Renegade {AlivePlayers.First().Name} has won!";
             else if (!AlivePlayers.Any(x => x.Role == Role.Outlaw || x.Role == Role.Renegade))
-                finalmsg = $"The Renegade and the Outlaws have died! The Sheriff and the Deputies have won, and the Renegade {Users.First(x => x.Role == Role.Renegade).Name} has lost!";
-
-            if (!String.IsNullOrEmpty(finalmsg))
             {
-                SendMessages();
-                foreach (var p in Watchers)
-                    Bot.Send(finalmsg, p.Id);
-                Status = GameStatus.Ending; 
+                finalmsg = "The Renegade and the Outlaws have died!";
+                var deputies = Users.Where(x => x.Role == Role.DepSheriff);
+                switch (deputies.Count())
+                {
+                    case 0:
+                        finalmsg += $"The Sheriff {Users.First(x => x.Role == Role.Sheriff).Name.ToBold()} has won, and the Renegade has lost!";
+                        break;
+                    case 1:
+                        finalmsg += $"The Sheriff {Users.First(x => x.Role == Role.Sheriff).Name.ToBold()} and his Deputy {deputies.First().Name.ToBold()} have won, and the Renegade has lost!";
+                        break;
+                    case 2:
+                        finalmsg += $"The Sheriff {Users.First(x => x.Role == Role.Sheriff).Name.ToBold()} and his Deputies {deputies.First().Name.ToBold()} and {deputies.Last().Name.ToBold()} have won, and the Renegade has lost!";
+                        break;
+                    default:
+                        throw new IndexOutOfRangeException($"There are {deputies.Count()} deputies.");
+                }
             }
 
+            if (String.IsNullOrEmpty(finalmsg))
+                return;
+
+            finalmsg += "\n\n<b>Players:</b>\n" + string.Join("\n", Users.Select(x => $"{x.Name.ToBold()} - {x.Role.GetString<Role>()}")); 
+            SendMessages();
+            foreach (var p in Watchers)
+                Bot.Send(finalmsg, p.Id);
+            Status = GameStatus.Ending; 
             return;
         }
 
