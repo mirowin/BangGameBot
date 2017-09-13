@@ -385,7 +385,7 @@ namespace BangGameBot
                         }
                         while (tasks.Any(x => !x.IsCompleted))
                             Task.Delay(1000).Wait();
-
+                        
                         for (var i = 1; i < Players.Count(); i++)
                         {
                             var target = Players[(i + Turn) % Players.Count()];
@@ -408,22 +408,34 @@ namespace BangGameBot
                         TellEveryone(Dealer.PeekedCards.Aggregate($"{_currentPlayer.Name} draws the following cards from the deck" + (reshuffled ? " reshuffling it" : " ") + ":\n", (s, c) => s + c.GetDescription() + "\n"));
                         AddToHelp(Dealer.PeekedCards);
                         SendMessages();
+
                         for (var i = 0; i < Players.Count(); i++)
                         {
                             var player = Players[(i + Turn) % Players.Count()];
                             if (player.IsDead) continue;
-                            Tell("Choose the card to take in hand.", player);
-                            SendMessages(player, Dealer.PeekedCards.MakeMenu(player));
-                            var chosencard = WaitForChoice(player, GameSettings.GeneralStoreTime)?.CardChosen ?? DefaultChoice.ChooseCardFrom(Dealer.PeekedCards);
+                            Card chosencard;
+                            if (Dealer.PeekedCards.Count() > 1)
+                            {
+                                Tell("Choose the card to take in hand.", player);
+                                SendMessages(player, Dealer.PeekedCards.MakeMenu(player));
+                                chosencard = WaitForChoice(player, GameSettings.GeneralStoreTime)?.CardChosen ?? DefaultChoice.ChooseCardFrom(Dealer.PeekedCards);
+                            }
+                            else
+                                chosencard = Dealer.PeekedCards.First();
                             Tell($"You take {chosencard.GetDescription()} in hand.", player, textforothers: $"{player.Name} took {chosencard.GetDescription()} in hand");
                             Dealer.DrawFromPeeked(player, chosencard);
                         }
+
+                        //why did i do this? when a player leaves, it's only counted as Left, not Dead. substituting commented code with throw exception:
                         if (Dealer.PeekedCards.Any())
-                        {
-                            TellEveryone("Some players left, so " + string.Join(", ", Dealer.PeekedCards.Select(x => x.GetDescription())) + " were discarded.");
-                            AddToHelp(Dealer.PeekedCards);
-                            Dealer.DiscardPeekedCards();
-                        }
+                            throw new Exception("General store drew too many cards");
+
+                        //if (i == Players.Count() && Dealer.PeekedCards.Any())
+                        //{
+                        //    TellEveryone("Some players left, so " + string.Join(", ", Dealer.PeekedCards.Select(x => x.GetDescription())) + " were discarded.");
+                        //    AddToHelp(Dealer.PeekedCards);
+                        //    Dealer.DiscardPeekedCards();
+                        //}
                         break;
                     case CardName.Indians:
                         UseIndians(_currentPlayer);
@@ -708,7 +720,7 @@ namespace BangGameBot
                 if (p.Choice?.CardChosen != null) // discarded
                 {
                     if (p.Choice.CardChosen.Name != CardName.Bang && (p.Choice.CardChosen.Name != CardName.Missed || p.Character != Character.CalamityJanet))
-                        throw new Exception("The player was meant to discard a Bang! card.");
+                        throw new Exception("The player was meant to discard a Bang! card. Card discarded instead was " + p.Choice.CardChosen.Name.GetString<CardName>());
                     Tell($"You discarded {p.Choice.CardChosen.GetDescription()}.", p, p.Choice.CardChosen.Name, textforothers: $"{p.Name} discarded {p.Choice.CardChosen.GetDescription()}");
                     Discard(p, p.Choice.CardChosen);
 
