@@ -9,7 +9,7 @@ namespace BangGameBot
 {
     public partial class Game
     {
-        private Player _currentPlayer => Players[Turn];
+        private Player _currentPlayer => Users[Turn];
 
         #region Initializers
 
@@ -25,8 +25,9 @@ namespace BangGameBot
                 while (Status != GameStatus.Ending)
                 {
                     Status = GameStatus.PhaseZero;
+                    Turn = (Turn + 1) % Users.Count();
                     ResetPlayers();
-                    Turn = (Turn + 1) % Players.Count();
+                    if (_currentPlayer.IsDead) continue;
                     SendPlayerList();
                     CheckDynamiteAndJail();
                     if (!_currentPlayer.CardsOnTable.Any(x => x.Name == CardName.Jail))
@@ -176,7 +177,6 @@ namespace BangGameBot
                     TellEveryone($"{_currentPlayer.Name} skips this turn. The Jail is discarded.", CardName.Jail);
                     // the caller method will discard jail
                 }
-                return;
             }
             SendMessages();
         }
