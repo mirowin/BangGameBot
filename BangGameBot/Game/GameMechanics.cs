@@ -742,7 +742,7 @@ namespace BangGameBot
                 //make the menu and send
                 var buttonslist = new List<InlineKeyboardCallbackButton[]>();
                 foreach (var p in possiblechoices)
-                    buttonslist.Add(new[] { new InlineKeyboardCallbackButton(p.Name + $"({p.CardsInHand.Count()})", $"game|player|{p.Id}") });
+                    buttonslist.Add(new[] { new InlineKeyboardCallbackButton($"({p.CardsInHand.Count()}) {p.Name}", $"game|player|{p.Id}") });
                 SendMessages(curplayer, buttonslist);
 
                 playerchosen = WaitForChoice(curplayer, GameSettings.ChoosePanicTargetTime)?.PlayerChosen ?? DefaultChoice.ChoosePlayer(possiblechoices);

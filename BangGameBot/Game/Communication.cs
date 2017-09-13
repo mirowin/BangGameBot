@@ -198,7 +198,7 @@ namespace BangGameBot
         {
             //these are the same for all players.
             var starttext = startinggame ? "Game started!" : "You have been added to a game.";
-            var playerlist = "Players:".ToBold() + Users.Aggregate("", (a, b) => a + "\n" + b.TelegramUser.FirstName + (b.VotedToStart || startinggame ? " 👍" : ""));
+            var playerlist = "Players:".ToBold() + Users.Aggregate("", (a, b) => a + "\n" + b.Name + (b.VotedToStart || startinggame ? " 👍" : ""));
             if (startinggame)
                 playerlist += "\n\nShuffling the deck and assigning roles and characters...";
 

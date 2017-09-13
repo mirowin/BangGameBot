@@ -62,7 +62,7 @@ namespace BangGameBot
         {
             TelegramUser = u;
             Id = u.Id;
-            Name = (u.FirstName.Length < 10 ? u.FirstName : u.FirstName.Substring(0, 10) + "...").FormatHTML();
+            Name = (u.FirstName.Length < 50 ? u.FirstName : u.FirstName.Substring(0, 50) + "...").FormatHTML();
 
             //set helpmode
             using (var db = new LiteDatabase(Program.LiteDBConnectionString))
