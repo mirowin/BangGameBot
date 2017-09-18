@@ -172,35 +172,33 @@ namespace BangGameBot
                 var game = Program.Games.FirstOrDefault(x => x.Users.Any(p => p.Id == userid && !p.HasLeftGame));
                 var player = game?.Users.FirstOrDefault(x => x.Id == userid);
                 if (player == null)
-                {
                     //remove the buttons and ignore.
                     Bot.EditMenu(null, q.Message);
-                    return;
-                }
-                switch (args[1])
-                {
-                    case "start":
-                        game.PlayerRequest(player, Request.VoteStart);
-                        break;
-                    case "leave":
-                        if (game.Status != GameStatus.Joining)
-                            game.LeaveGame(player, q);
-                        else
-                            game.PlayerRequest(player, Request.Leave, q);
-                        break;
-                    case "players":
-                        game.SendPlayerList(player, args[2] == "new" ? null : q, args[2] == "new");
-                        break;
-                    case "playerinfo":
-                        game.SendPlayerInfo(q, game.Users.FirstOrDefault(x => x.Id == long.Parse(args[2])), player);
-                        break;
-                    case "mycards":
-                        game.ShowMyCards(q, player);
-                        return; //this must not send the alert
-                    default:
-                        game.HandleChoice(player, args.Skip(1).ToArray(), q);
-                        break;
-                }
+                else
+                    switch (args[1])
+                    {
+                        case "start":
+                            game.PlayerRequest(player, Request.VoteStart);
+                            break;
+                        case "leave":
+                            if (game.Status != GameStatus.Joining)
+                                game.LeaveGame(player, q);
+                            else
+                                game.PlayerRequest(player, Request.Leave, q);
+                            break;
+                        case "players":
+                            game.SendPlayerList(player, args[2] == "new" ? null : q, args[2] == "new");
+                            break;
+                        case "playerinfo":
+                            game.SendPlayerInfo(q, game.Users.FirstOrDefault(x => x.Id == long.Parse(args[2])), player);
+                            break;
+                        case "mycards":
+                            game.ShowMyCards(q, player);
+                            return; //this must not send the alert
+                        default:
+                            game.HandleChoice(player, args.Skip(1).ToArray(), q);
+                            break;
+                    }
                 Bot.SendAlert(q);
                 return;
             }
