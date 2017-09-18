@@ -62,9 +62,9 @@ namespace BangGameBot
 
         private void TellEveryone(string text = "", CardName cardused = CardName.None, Character character = Character.None, IEnumerable<Player> except = null)
         {
-            var recipients = Watchers;
+            var recipients = new List<Player>(Watchers);
             if (except != null)
-                recipients = recipients.Except(except);
+                recipients = recipients.Except(except).ToList();
             foreach (var p in recipients)
                 Tell(text, p, cardused, character);
             return;
