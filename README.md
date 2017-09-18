@@ -15,7 +15,7 @@ Info about the game:
      - Copy the bot's token.
      - Create a new blank .txt file, and paste the token, then save and close.
   - In Program.cs, change settings according to your preferences
-     - Change `renyhp` to your Telegram ID. That account is the only one authorised to use the /photoid command, and it receives error logs in PM.
+     - Change `renyhp` to your Telegram ID. That account is the only one authorised to use some dev commands, and it receives error logs in PM.
      - Change `TokenPath` to make it point to wherever you put the .txt file that you created in the previous step. Currently, it will search for token.txt in the same directory as the build.
   - Build the solution with Visual Studio.
   - Play!
