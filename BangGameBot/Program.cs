@@ -26,6 +26,7 @@ namespace BangGameBot
         public static readonly string LiteDBConnectionString = "BangDB.db";
         
         public static List<Game> Games = new List<Game>();
+        public static bool Maintenance = false;
 
         public static void Main() {
             Console.Title = "Bang! @" + Bot.Me.Username;
@@ -145,13 +146,18 @@ namespace BangGameBot
 
         private static void MonitorUpdater()
         {
+            string msg;
             while (true)
             {
+                msg = $"Bang! v{string.Join(".", FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion.Split('.').Take(2))}" + Environment.NewLine +
+                    $"Current running / total games: {Games.Count(x => x.Status != GameStatus.Joining)} / {Games.Count}" + Environment.NewLine +
+                    $"Current playing / total players: {Games.SelectMany(x => x.Players).Count()} / {Games.SelectMany(x => x.Users).Count()}";
+                if (Maintenance)
+                    msg += Environment.NewLine + Environment.NewLine + "Maintenance mode: ON";
+
                 Console.Clear();
                 Console.SetCursorPosition(0, 0);
-                Console.WriteLine($"Bang! v{string.Join(".", FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion.Split('.').Take(2))}");
-                Console.WriteLine($"Current total games: {Games.Count}");
-                Console.WriteLine($"Current running games: {Games.Count(x => x.Status != GameStatus.Joining)}");
+                Console.WriteLine(msg);
 
                 Task.Delay(10000).Wait();
             }

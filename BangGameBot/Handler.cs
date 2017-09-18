@@ -75,9 +75,44 @@ namespace BangGameBot
                         }
                         else
                             NewPublicGame(msg.From);
-
                     }
                     break;
+                case "help":
+                    reply = "You can find the complete official rules for Bang! <a href=\"http://www.dvgiochi.net/bang/bang_rules.pdf\">here</a>." +
+                        "\nUse /helpMode to toggle the Help Mode." +
+                        "\nAt any time, you can get info for any card by simply typing @BangGameBot and the card you're searching for.";
+                    Bot.Api.SendTextMessageAsync(chatid, reply, ParseMode.Html);
+                    return;
+                case "ping":
+                    var ping = DateTime.Now - msg.Date;
+                    var sendtime = DateTime.Now;
+                    reply = "Time to receive your message: " + ping.ToString(@"mm\:ss\.fff");
+                    result = Bot.Send(reply, chatid).Result;
+                    ping = DateTime.Now - sendtime;
+                    reply += Environment.NewLine + "Time to send this message: " + ping.ToString(@"mm\:ss\.fff");
+                    Bot.Edit(reply, result);
+                    break;
+                case "helpmode":
+                    PlayerSettings playersettings;
+                    using (var db = new LiteDatabase(Program.LiteDBConnectionString))
+                    {
+                        var settings = db.GetCollection<PlayerSettings>("settings");
+                        playersettings = settings.FindOne(x => x.TelegramId == userid);
+                        if (playersettings == null)
+                        {
+                            playersettings = new PlayerSettings { TelegramId = userid, HelpMode = false };
+                            settings.Insert(playersettings);
+                        }
+                        playersettings.HelpMode = !playersettings.HelpMode;
+                        settings.Update(playersettings);
+                    }
+                    Bot.Send("Help mode turned " + (playersettings.HelpMode ? "on" : "off"), chatid);
+
+                    //change helpmode in game         
+                    var player = Program.Games.FirstOrDefault(x => x.Users.Any(p => p.Id == userid && !p.HasLeftGame))?.Users.FirstOrDefault(x => x.Id == userid);
+                    if (player != null)
+                        player.HelpMode = playersettings.HelpMode;
+                    return;
                 case "newgame":
                     //check if they are in a game
                     if (Program.Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
@@ -85,7 +120,11 @@ namespace BangGameBot
                         Bot.Send("You are already in a game. You can /leave it to start a new game.", chatid);
                         return;
                     }
-                    
+                    if (Program.Maintenance)
+                    {
+                        Bot.Send("Sorry, the bot is being shut down for maintenance. Please retry in a few minutes.", chatid);
+                        return;
+                    }
                     if (msg.Chat.Type == ChatType.Private)
                         menu = new [] { new InlineKeyboardCallbackButton("Play with strangers", "newgame|public").ToSinglet(), new InlineKeyboardCallbackButton("Play with friends", "newgame|private").ToSinglet() };
                     else
@@ -113,41 +152,22 @@ namespace BangGameBot
                         Bot.Send("You must reply to a photo", chatid);
                     Bot.Send(msg.ReplyToMessage?.Photo[0]?.FileId, chatid);
                     return;
-                case "help":
-                    reply = "You can find the complete official rules for Bang! <a href=\"http://www.dvgiochi.net/bang/bang_rules.pdf\">here</a>." +
-                        "\nUse /helpMode to toggle the Help Mode." +
-                        "\nAt any time, you can get info for any card by simply typing @BangGameBot and the card you're searching for.";
-                    Bot.Api.SendTextMessageAsync(chatid, reply, ParseMode.Html);
-                    return;
-                case "ping":
-                    var ping = DateTime.Now - msg.Date;
-                    var sendtime = DateTime.Now;
-                    reply = "Time to receive your message: " + ping.ToString(@"mm\:ss\.fff");
-                    var result = Bot.Send(reply, chatid).Result;
-                    ping = DateTime.Now - sendtime;
-                    reply += Environment.NewLine + "Time to send this message: " + ping.ToString(@"mm\:ss\.fff");
-                    Bot.Edit(reply, result);
-                    break;
-                case "helpmode":
-                    PlayerSettings playersettings;
-                    using (var db = new LiteDatabase(Program.LiteDBConnectionString))
+                case "maintenance":
+                    if (userid != Program.renyhp)
+                        return;
+                    Program.Maintenance = true;
+                    while (Program.Games.Count() > 0)
                     {
-                        var settings = db.GetCollection<PlayerSettings>("settings");
-                        playersettings = settings.FindOne(x => x.TelegramId == userid);
-                        if (playersettings == null)
-                        {
-                            playersettings = new PlayerSettings { TelegramId = userid, HelpMode = false };
-                            settings.Insert(playersettings);
-                        }
-                        playersettings.HelpMode = !playersettings.HelpMode;
-                        settings.Update(playersettings);
+                        var games = Program.Games.Count();
+                        reply = $"Maintenance mode turned on. Waiting for {games} games to end...";
+                        if (result == null)
+                            result = Bot.Send(reply, chatid).Result;
+                        else
+                            Bot.Edit(reply, result);
+                        while (Program.Games.Count() == games)
+                            Task.Delay(10000).Wait();
                     }
-                    Bot.Send("Help mode turned " + (playersettings.HelpMode ? "on" : "off"), chatid);
-
-                    //change helpmode in game         
-                    var player = Program.Games.FirstOrDefault(x => x.Users.Any(p => p.Id == userid && !p.HasLeftGame))?.Users.FirstOrDefault(x => x.Id == userid);
-                    if (player != null)
-                        player.HelpMode = playersettings.HelpMode;
+                    Bot.Send("No active games. The bot can be shut down.", chatid);
                     return;
                 default:
                     return;
@@ -210,6 +230,11 @@ namespace BangGameBot
                     if (Program.Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
                     {
                         Bot.SendAlert(q, "You are already in a game. Please /leave the game to start a new one");
+                        return;
+                    }
+                    if (Program.Maintenance)
+                    {
+                        Bot.SendAlert(q, "Sorry, the bot is being shut down for maintenance. Please retry in a few minutes.");
                         return;
                     }
                     if (args[1] == "public")
