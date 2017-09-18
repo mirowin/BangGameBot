@@ -114,11 +114,11 @@ namespace BangGameBot
         {
             if (Status == GameStatus.Ending) return;
             foreach (var w in Watchers)
-                SendPlayerList(w);
+                SendPlayerList(w, null, false);
             return;
         }
 
-        public void SendPlayerList(Player p, CallbackQuery q = null, bool expanded = false)
+        public void SendPlayerList(Player p, CallbackQuery q = null, bool expanded = true)
         {
             var text = "Players".ToBold() + ":\n";
             text += Users.Aggregate("", (s, pl) =>

@@ -189,7 +189,7 @@ namespace BangGameBot
                             game.PlayerRequest(player, Request.Leave, q);
                         break;
                     case "players":
-                        game.SendPlayerList(player, args[2] == "new" ? null : q, args[2] == "expanded");
+                        game.SendPlayerList(player, args[2] == "new" ? null : q, args[2] == "new");
                         break;
                     case "playerinfo":
                         game.SendPlayerInfo(q, game.Users.FirstOrDefault(x => x.Id == long.Parse(args[2])), player);
