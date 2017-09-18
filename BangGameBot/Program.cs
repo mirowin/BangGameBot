@@ -21,7 +21,7 @@ namespace BangGameBot
         public static readonly Random R = new Random();
         public static readonly string TokenPath = @"token.txt";
         public static readonly string LogPath = "errors.log";
-        public static readonly long renyhp = 133748469;
+        public static readonly int renyhp = 133748469;
         public static readonly DateTime StartTime = DateTime.UtcNow;
         public static readonly string LiteDBConnectionString = "BangDB.db";
         
