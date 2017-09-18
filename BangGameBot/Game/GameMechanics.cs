@@ -971,7 +971,7 @@ namespace BangGameBot
             if (deadplayer.Role == Role.Sheriff && AlivePlayers.Any(x => x.Role == Role.Outlaw))
             {
                 finalmsg = $"The Sheriff has died! The Outlaws " + string.Join(", ", Users.Where(x => x.Role == Role.Outlaw).Select(x => x.Name)).ToBold() + " have won!";
-                foreach (var p in Players.Where(x => x.Role == Role.Outlaw))
+                foreach (var p in Users.Where(x => x.Role == Role.Outlaw))
                     p.Won = true;
             }
             else if (AlivePlayers.All(x => x.Role == Role.Renegade))
@@ -998,9 +998,7 @@ namespace BangGameBot
                         throw new IndexOutOfRangeException($"There are {deputies.Count()} deputies.");
                 }
                 foreach (var d in deputies.Union(Users.Where(x => x.Role == Role.Sheriff)))
-                {
                     d.Won = true;
-                }
             }
 
             if (String.IsNullOrEmpty(finalmsg))
