@@ -95,9 +95,13 @@ namespace BangGameBot
             return rows;
         }
 
-        public static List<InlineKeyboardCallbackButton[]> AddYesButton(this List<InlineKeyboardCallbackButton[]> buttons, string str)
+        public static List<InlineKeyboardCallbackButton[]> AddYesButton(this List<InlineKeyboardCallbackButton[]> buttons, string str, bool firstbutton = false)
         {
-            buttons.Add(new[] { new InlineKeyboardCallbackButton(str, $"game|bool|yes") });
+            var button = new[] { new InlineKeyboardCallbackButton(str, $"game|bool|yes") };
+            if (firstbutton)
+                buttons.Insert(0, button);
+            else
+                buttons.Add(button);
             return buttons;
         }
 

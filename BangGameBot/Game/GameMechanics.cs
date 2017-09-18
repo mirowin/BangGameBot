@@ -783,13 +783,13 @@ namespace BangGameBot
             {
                 //choose the card
                 Tell(
-                    iscatbalou ? "Choose which card to discard." : "Choose which card to steal.",
+                    (iscatbalou ? "Choose which card to discard. You can discard a random card from hand, or choose between the cards on table." : "Choose which card to steal. You can steal a random card from hand, or choose between the cards on table."),
                     curplayer, iscatbalou ? CardName.CatBalou : CardName.Panic,
                     textforothers: iscatbalou ? $"{curplayer.Name} chose to discard a card from {playerchosen.Name}." : $"{curplayer.Name} chose to steal a card from {playerchosen.Name}.");
                 //make menu and send
                 var buttonslist = playerchosen.CardsOnTable.MakeMenu(curplayer);
                 if (playerchosen.CardsInHand.Count() > 0)
-                    buttonslist = buttonslist.AddYesButton(iscatbalou ? "Discard from hand" : "Steal from hand");
+                    buttonslist = buttonslist.AddYesButton(iscatbalou ? "Discard from hand" : "Steal from hand", true);
                 SendMessages(curplayer, buttonslist);
 
                 //see what they chose
