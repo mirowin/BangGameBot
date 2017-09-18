@@ -39,9 +39,9 @@ namespace BangGameBot
             new CardDescription("AgADBAADz6kxGw_eSVO_TF7agq5ct9fPvBkABKqX4VkLPlr6rjwDAAEC", "Wells Fargo", CardName.WellsFargo, "Draw three cards from the deck."),
 
             //permcards
-            new CardDescription("AgADBAADqakxGw_eSVP11sEKFHKtEFVYqRkABO7VEFW2NSJbBLEDAAEC", "Barrel", CardName.Barrel, "Allows you to “draw!” when you are the target of a Bang! or of a Gatling. If you draw a Heart card, you are Missed!, otherwise, you lose a life point."),
-            new CardDescription("AgADBAADsakxGw_eSVPM5GA34ufB19lZqRkABJccV61a9ahbj7ADAAEC", "Dynamite", CardName.Dynamite, "At the beginning of your turn, you “draw!”: if the “drawn!” card is a 2-9 of spades, you lose 3 life points and discard the Dynamite, otherwise, pass the Dynamite to the next player."),
-            new CardDescription("AgADBAADwqkxGw_eSVPTwDiSgmjomvXbvBkABBKdaEpaR5jUmzgDAAEC", "Jail", CardName.Jail, "Choose a player (any but the Sheriff!) to put in jail. If you are in jail, at the beginning of the turn you “draw!”: you play your turn only if the card is a Heart. The Jail is discarded anyway."),
+            new CardDescription("AgADBAADqakxGw_eSVP11sEKFHKtEFVYqRkABO7VEFW2NSJbBLEDAAEC", "Barrel", CardName.Barrel, "Allows you to “draw!” when you are the target of a Bang! or of a Gatling. If you draw a ♥️ card, you are Missed!, otherwise, you lose a life point."),
+            new CardDescription("AgADBAADsakxGw_eSVPM5GA34ufB19lZqRkABJccV61a9ahbj7ADAAEC", "Dynamite", CardName.Dynamite, "At the beginning of your turn, you “draw!”: if the “drawn!” card is between 2♠️-9♠️, you lose 3 life points and discard the Dynamite, otherwise, pass the Dynamite to the next player."),
+            new CardDescription("AgADBAADwqkxGw_eSVPTwDiSgmjomvXbvBkABBKdaEpaR5jUmzgDAAEC", "Jail", CardName.Jail, "Choose a player (any but the Sheriff!) to put in jail. If you are in jail, at the beginning of the turn you “draw!”: you play your turn only if the card is a ♥️. The Jail is discarded anyway."),
             new CardDescription("AgADBAADvqkxGw_eSVN_ihOEeIeTtWRVqRkABCLj0mNcJSwFG7ADAAEC", "Mustang", CardName.Mustang, "If you have this card in play, other players see you at a distance increased by 1. You still see other players at normal distance."),
             new CardDescription("AgADBAADvakxGw_eSVNTuF27mcEVYwUYvRkABL7Q3NeR6_m4Zz0DAAEC", "Scope", CardName.Scope, "If you have this card in play, you see others at a distance decreased by 1. Other players still see you at normal distance.\nNote: Distances less than 1 are considered to be 1."),
 
@@ -54,7 +54,7 @@ namespace BangGameBot
 
             //characters
             new CardDescription("AgADBAADqqkxGw_eSVOiUP_XsnKPc-puaRkABODvJnNtrC3f9eEBAAEC", "Bart Cassidy", Character.BartCassidy, "Each time he loses a life point, he immediately draws a card from the deck."),
-            new CardDescription("AgADBAADrKkxGw_eSVNKhVOoPE6KD1OwuxkABF-akCQV9AyCjz0DAAEC", "Black Jack", Character.BlackJack, "At the beginning of his turn, he must show the second card he draws: if it’s a Heart or Diamond, he draws one additional card (without revealing it)."),
+            new CardDescription("AgADBAADrKkxGw_eSVNKhVOoPE6KD1OwuxkABF-akCQV9AyCjz0DAAEC", "Black Jack", Character.BlackJack, "At the beginning of his turn, he must show the second card he draws: if it’s a ♥️ or ♦️, he draws one additional card (without revealing it)."),
             new CardDescription("AgADBAADrakxGw_eSVNYNi5mODn1VgMavRkABZty29NaL2ZcPgMAAQI", "Calamity Janet", Character.CalamityJanet, "She can use Bang! cards as Missed! cards and vice versa.\nNote: If she plays a Missed! card as a Bang!, she cannot play another Bang! card that turn (unless a Volcanic is active)."),
             new CardDescription("AgADBAADs6kxGw_eSVMtfLFHRGgZlPUoqRkABPncLrs1KWSTZa8DAAEC", "El Gringo", Character.ElGringo, "Each time he loses a life point due to a card played by another player, he draws a card from the hand of that player.\nNote: Dynamite damages are not caused by anyone."),
             new CardDescription("AgADBAADuKkxGw_eSVN5KSwkbCkuu904nRkABJ7I5yWPgqGi9doBAAEC", "Jesse Jones", Character.JesseJones, "At the beginning of his turn, he may choose to draw the first card from the deck, or from the hand of any other player; then he draws the second card from the deck."),
