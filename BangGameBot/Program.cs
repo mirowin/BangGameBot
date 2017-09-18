@@ -151,7 +151,7 @@ namespace BangGameBot
             {
                 msg = $"Bang! v{string.Join(".", FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion.Split('.').Take(2))}" + Environment.NewLine +
                     $"Current running / total games: {Games.Count(x => x.Status != GameStatus.Joining)} / {Games.Count}" + Environment.NewLine +
-                    $"Current playing / total players: {Games.SelectMany(x => x.Players).Count()} / {Games.SelectMany(x => x.Users).Count()}";
+                    $"Current playing / total players: {Games.SelectMany(x => x.Players ?? Enumerable.Empty<Player>()).Count()} / {Games.SelectMany(x => x.Users).Count()}";
                 if (Maintenance)
                     msg += Environment.NewLine + Environment.NewLine + "Maintenance mode: ON";
 
