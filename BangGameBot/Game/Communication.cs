@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.InlineKeyboardButtons;
-using Telegram.Bot.Types.ReplyMarkups;
 
 namespace BangGameBot
 {

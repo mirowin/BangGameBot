@@ -1,6 +1,5 @@
 ﻿using LiteDB;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Telegram.Bot.Types;
@@ -46,6 +45,7 @@ namespace BangGameBot
             cmd = cmd.ToLower();
             string reply;
             InlineKeyboardButton[][] menu;
+            Message result = null;
             switch (cmd)
             {
                 case "start":
@@ -62,11 +62,14 @@ namespace BangGameBot
                             if (game == null)
                                 Bot.Send("This game has expired. Please start a /newgame", chatid);
                             else if (game.Users.Any(x => x.Id == userid))
-                                Bot.Send("You are already in this game", chatid);
+                                Bot.Send("You are already in this game.", chatid);
                             else if ((Program.Games.FirstOrDefault(x => x.Users.Any(u => u.Id == userid && !u.HasLeftGame))?.Id ?? id) != id)
                                 Bot.Send("You are already in a game. Please /leave the game to join this one.", chatid);
                             else
+                            {
                                 game.PlayerRequest(new Player(msg.From), Request.Join);
+                                JoinBangTesting(msg.From);
+                            }
                         }
                         else if (Program.Games.Any(x => x.Users.Any(y => y.Id == userid && !y.HasLeftGame)))
                         {
@@ -280,6 +283,13 @@ namespace BangGameBot
             else
                 //create new game
                 Program.Games.Add(new Game(new Player(u)));
+            JoinBangTesting(u);
+        }
+
+        private static void JoinBangTesting(User u)
+        {
+            if (new[] { ChatMemberStatus.Kicked, ChatMemberStatus.Left }.Contains(Bot.Api.GetChatMemberAsync(-1001126915338, u.Id).Result.Status))
+                Bot.Send("Please join @bangtesting to help giving feedback about the bot.", u.Id);
         }
 
         public static void HandleInlineQuery(InlineQuery q)
