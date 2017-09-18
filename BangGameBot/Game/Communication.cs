@@ -131,7 +131,7 @@ namespace BangGameBot
             if (expanded)
             {
                 menu = GetPlayerMenu(p);
-                menu.Add(new[] { new InlineKeyboardCallbackButton("🗑Delete this message", "delete") });
+                menu.Add(new[] { new InlineKeyboardCallbackButton("📖Legend", "legend"), new InlineKeyboardCallbackButton("🗑Delete this message", "delete") });
             }
             else
             {

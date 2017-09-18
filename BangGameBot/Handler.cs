@@ -181,7 +181,7 @@ namespace BangGameBot
                         while (Program.Games.Count() == games)
                             Task.Delay(10000).Wait();
                     }
-                    Bot.Send("No active games. The bot can be shut down.", chatid);
+                    Bot.Send("No active games. The bot can be shut down.", Program.renyhp);
                     return;
                 default:
                     return;
@@ -277,6 +277,13 @@ namespace BangGameBot
                     var character = args[1] == "character";
                     var card = Helpers.Cards.FirstOrDefault(x => x.CardType == (character ? typeof(Character) : typeof(CardName)) && x.EnumVal == int.Parse(args[2]));
                     Bot.SendAlert(q, card.Name + "\n" + card.Description);
+                    return;
+                case "legend":
+                    var msg = "The first player is the Sheriff.\n" +
+                        "All players sit in a circle. The numbers in emoji represent the distance at which you see the player.\n" +
+                        "➡️ is you; ⏹ marks dead players; 👈 marks the current turn; each ❤️ represents a life point.\n" +
+                        "Note that dead players don't count for distance.";
+                    Bot.SendAlert(q, msg);
                     return;
                 case "delete":
                     Bot.Delete(q.Message).Wait();
