@@ -76,6 +76,10 @@ namespace BangGameBot
                             Bot.Send("You are already in a game. You can /leave it to start a new game.", chatid);
                             return;
                         }
+                        else if (Program.Maintenance)
+                        {
+                            Bot.Send("Sorry, the bot is being shut down for maintenance. Please retry in a few minutes.", chatid);
+                        }
                         else
                             NewPublicGame(msg.From);
                     }
