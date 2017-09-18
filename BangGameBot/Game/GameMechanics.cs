@@ -1010,8 +1010,10 @@ namespace BangGameBot
                 finalmsg += $"\n{x.Name.ToBold()} - {x.Role.GetString<Role>()} - <i>{won}</i>";
             }
             SendMessages();
-            foreach (var p in Watchers)
-                Bot.Send(finalmsg, p.Id);
+
+            TellEveryone(finalmsg);
+            SendMessages();
+
             Status = GameStatus.Ending; 
             return;
         }
