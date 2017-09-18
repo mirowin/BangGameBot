@@ -160,7 +160,7 @@ namespace BangGameBot
 
         public string LivesString()
         {
-            string r = "";
+            string r = " ";
             for (var i = 0; i < Lives; i++)
             {
                 r += "❤️";

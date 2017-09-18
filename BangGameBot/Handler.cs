@@ -218,7 +218,7 @@ namespace BangGameBot
                         Bot.Edit("Searching for a game...", q.Message).Wait();
                         NewPublicGame(q.From);
                     }
-                    else
+                    else if (args[1] == "private")
                     {
                         var game = new Game(null);
                         Program.Games.Add(game);
