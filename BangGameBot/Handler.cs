@@ -159,6 +159,13 @@ namespace BangGameBot
                     if (userid != Program.renyhp)
                         return;
                     Program.Maintenance = true;
+
+                    var joining = Program.Games.Where(x => x.Status == GameStatus.Joining);
+                    foreach (var uid in joining.SelectMany(x => x.Users).Select(x => x.Id))
+                        Bot.Send("Sorry, we are entering maintenance mode. The game is being cancelled. Please retry in a few minutes.", uid);
+                    foreach (var g in joining)
+                        g.Dispose();
+
                     while (Program.Games.Count() > 0)
                     {
                         var games = Program.Games.Count();
