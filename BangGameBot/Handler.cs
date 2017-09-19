@@ -280,9 +280,8 @@ namespace BangGameBot
                     return;
                 case "legend":
                     var msg = "The first player is the Sheriff.\n" +
-                        "All players sit in a circle. The numbers in emoji represent the distance at which you see the player.\n" +
-                        "➡️ is you; ⏹ marks dead players; 👈 marks the current turn; each ❤️ represents a life point.\n" +
-                        "Note that dead players don't count for distance.";
+                        "The numbers are the distances at which you see the players; dead players don't count.\n" +
+                        "➡️: You\n👈: Current turn\n❤️: 1 life point.\n";
                     Bot.SendAlert(q, msg);
                     return;
                 case "delete":
@@ -306,6 +305,9 @@ namespace BangGameBot
 
         private static void JoinBangTesting(User u)
         {
+#if DEBUG
+            return;
+#endif
             if (new[] { ChatMemberStatus.Kicked, ChatMemberStatus.Left }.Contains(Bot.Api.GetChatMemberAsync(-1001126915338, u.Id).Result.Status))
                 Bot.Send("Please join @bangtesting to help giving feedback about the bot.", u.Id);
         }

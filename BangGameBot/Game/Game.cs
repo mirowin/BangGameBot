@@ -144,7 +144,7 @@ namespace BangGameBot
         private static class GameSettings
         {
             public static readonly int InactiveMinutes = 10;
-            public static readonly int MinPlayers = 4;
+            public static readonly int MinPlayers = 2;
             public static readonly int MaxPlayers = 7;
 
             //TIMES
