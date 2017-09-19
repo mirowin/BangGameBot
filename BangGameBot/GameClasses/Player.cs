@@ -105,6 +105,18 @@ namespace BangGameBot
             return c;
         }
 
+        public void StealAllCardsFrom(Player p)
+        {
+            if (Character != Character.VultureSam)
+                throw new ArgumentException("Someone is stealing all cards!");
+            foreach (var c in p.Cards)
+            {
+                c.IsOnTable = false;
+                this.Cards.Add(c);
+            }
+            p.Cards.Clear();
+        }
+
         public void SetLives()
         {
             Lives = MaxLives;

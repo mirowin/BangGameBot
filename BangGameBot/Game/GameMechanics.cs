@@ -951,8 +951,7 @@ namespace BangGameBot
             var vulturesam = AlivePlayers.FirstOrDefault(x => x.Character == Character.VultureSam);
             if (vulturesam != null)
             {
-                foreach (var c in target.Cards)
-                    vulturesam.StealFrom(target, c);
+                vulturesam.StealAllCardsFrom(target);
                 Tell($"You take in hand all {target.Name}'s cards.", vulturesam, character: Character.VultureSam, textforothers: $"{vulturesam.Name} takes in hand all {target.Name}'s cards.");
             }
             else
