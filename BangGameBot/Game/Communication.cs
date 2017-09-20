@@ -101,9 +101,9 @@ namespace BangGameBot
             }
             catch(AggregateException e)
             {
-                if (e.InnerException.Message.Contains("blocked by the user"))
+                if (e.InnerExceptions.Any(x => x.Message.Contains("blocked by the user")))
                     LeaveGame(p);
-                else
+                else if (!e.InnerExceptions.Any(x => x.Message.Contains("timed out")))
                     throw;
             }
             msg.Clear();
@@ -150,7 +150,9 @@ namespace BangGameBot
             }
             catch (AggregateException e)
             {
-                if (!e.InnerExceptions.Any(x => x.Message.Contains("timed out")))
+                if (e.InnerExceptions.Any(x => x.Message.Contains("blocked by the user")))
+                    LeaveGame(p);
+                else if (!e.InnerExceptions.Any(x => x.Message.Contains("timed out")))
                     throw;
             }
         }
@@ -293,17 +295,25 @@ namespace BangGameBot
                 }
                 var menu = startinggame ? null : buttons.ToArray().ToSinglet().ToKeyboard();
 
-
-                if (p.PlayerListMsg == null)
-                    p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
-                else if (addingplayer)
+                try
                 {
-                    Bot.Delete(p.PlayerListMsg).Wait();
-                    p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+                    if (p.PlayerListMsg == null)
+                        p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+                    else if (addingplayer)
+                    {
+                        Bot.Delete(p.PlayerListMsg).Wait();
+                        p.PlayerListMsg = Bot.Send(text, p.Id, menu).Result;
+                    }
+                    else if (!text.IsHTMLEqualTo(p.PlayerListMsg.Text))
+                        p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, menu).Result;
                 }
-                else if (!text.IsHTMLEqualTo(p.PlayerListMsg.Text))
-                    p.PlayerListMsg = Bot.Edit(text, p.PlayerListMsg, menu).Result;
-
+                catch (AggregateException e)
+                {
+                    if (e.InnerExceptions.Any(x => x.Message.Contains("blocked by the user")))
+                        PlayerLeave(p, null);
+                    else if (!e.InnerExceptions.Any(x => x.Message.Contains("timed out")))
+                        throw;
+                }
                 if (startinggame)
                     p.PlayerListMsg = null;
 

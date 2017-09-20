@@ -100,9 +100,10 @@ namespace BangGameBot
 
         public void PlayerLeave(Player p, CallbackQuery q)
         {
-            Bot.Edit("You have been removed from the game.", q.Message).Wait();
+            if (q != null)
+                Bot.Edit("You have been removed from the game.", q.Message).Wait();
             Users.Remove(p);
-            if (Users.Count() == 0)
+            if (Users.Count() == 0) //TODO: this is not what I really want to do. Create a game -> it stays there for 10 minutes. But if I create a game, then leave it immediately, the game expires.
             {
                 this.Dispose();
                 return;
